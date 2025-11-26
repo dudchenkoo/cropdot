@@ -46,7 +46,17 @@ FORMAT RULES:
 - No markdown, no formatting, no commentary.
 - Must be valid JSON parsable by JSON.parse().`
 
-// Mock data generator for testing
+/**
+ * Generates mock carousel data for testing or local development without calling the LLM backend.
+ *
+ * @param {string} topic - The carousel subject requested by the user.
+ * @param {string} platform - The target platform used to tailor tone and CTA language.
+ * @returns {{ topic: string, platform: string, slides: Array<Record<string, unknown>>, summary: string }}
+ * A structured mock carousel payload that mirrors the production response shape.
+ * @example
+ * generateMockCarousel("time management", "instagram")
+ * // => { topic: "time management", platform: "instagram", slides: [...], summary: "..." }
+ */
 function generateMockCarousel(topic: string, platform: string) {
   return {
     topic: topic,
@@ -123,6 +133,51 @@ function generateMockCarousel(topic: string, platform: string) {
   }
 }
 
+/**
+ * POST /api/generate – Produces a JSON carousel outline tailored to the requested topic and platform.
+ *
+ * Request body format: `{ topic: string, platform: string, goal?: string, tone?: string }`.
+ * Responds with `{ topic, platform, slides: Array, summary }` on success, or `{ error, details? }` with
+ * HTTP 400 for validation errors and 500 for unexpected server issues.
+ *
+ * @param {Request} request - The incoming HTTP request containing carousel generation parameters in JSON format.
+ * @returns {Promise<Response>} A response wrapping the generated carousel payload or an error description.
+ * @throws {SyntaxError} If the request body cannot be parsed as JSON.
+ * @example
+ * // Client usage
+ * await fetch("/api/generate", {
+ *   method: "POST",
+ *   headers: { "Content-Type": "application/json" },
+ *   body: JSON.stringify({
+ *     topic: "AI prompts",
+ *     platform: "linkedin",
+ *     goal: "educate founders",
+ *     tone: "authoritative"
+ *   })
+ * })
+ *
+ * @example
+ * // Example success response body
+ * {
+ *   "topic": "AI prompts",
+ *   "platform": "linkedin",
+ *   "slides": [ /* array of slide objects */ ],
+ *   "summary": "High-level recap for carousel readers."
+ * }
+ *
+ * @example
+ * // Example validation error (HTTP 400)
+ * {
+ *   "error": "Topic and platform are required"
+ * }
+ *
+ * @example
+ * // Example server error (HTTP 500)
+ * {
+ *   "error": "Internal server error",
+ *   "details": "Optional stack trace information"
+ * }
+ */
 export async function POST(request: Request) {
   try {
     const { topic, platform } = await request.json()
