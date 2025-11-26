@@ -56,7 +56,7 @@ const interTight = Inter_Tight({
  * <CarouselGenerator />
  * ```
  */
-export function CarouselGenerator() {
+export function CarouselGenerator(): JSX.Element {
   const [carouselData, setCarouselData] = useState<CarouselData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [viewMode, setViewMode] = useState<"dashboard" | "creation">("dashboard")
@@ -68,7 +68,7 @@ export function CarouselGenerator() {
   const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
 
-  const handleGenerate = (data: CarouselData) => {
+  const handleGenerate = (data: CarouselData): void => {
     const dataWithLayers = {
       ...data,
       slides: data.slides.map((slide) => ({
@@ -83,7 +83,7 @@ export function CarouselGenerator() {
     setViewMode("creation")
   }
 
-  const updateCarouselData = (updatedData: CarouselData) => {
+  const updateCarouselData = (updatedData: CarouselData): void => {
     setCarouselData(updatedData)
     // Also update savedCarousels if this carousel is in the list
     setSavedCarousels((prev) => {
@@ -97,7 +97,7 @@ export function CarouselGenerator() {
     })
   }
 
-  const handleLayerUpdate = (slideIndex: number, layerId: string, content: string) => {
+  const handleLayerUpdate = (slideIndex: number, layerId: string, content: string): void => {
     if (!carouselData) return
     const updatedSlides = carouselData.slides.map((slide, index) => {
       if (index === slideIndex) {
@@ -114,7 +114,7 @@ export function CarouselGenerator() {
     setTimeout(() => setSavedStatus(null), 1500)
   }
 
-  const handleLayerStyleUpdate = (slideIndex: number, layerId: string, style: Partial<Layer["style"]>) => {
+  const handleLayerStyleUpdate = (slideIndex: number, layerId: string, style: Partial<Layer["style"]>): void => {
     if (!carouselData) return
     const updatedSlides = carouselData.slides.map((slide, index) => {
       if (index === slideIndex) {
@@ -143,7 +143,7 @@ export function CarouselGenerator() {
     setTimeout(() => setSavedStatus(null), 1500)
   }
 
-  const handleBackgroundUpdate = (slideIndex: number | "all", background: Partial<Slide["background"]>) => {
+  const handleBackgroundUpdate = (slideIndex: number | "all", background: Partial<Slide["background"]>): void => {
     if (!carouselData) return
     const slidesToUpdate = slideIndex === "all" ? carouselData.slides.map((_, i) => i) : [slideIndex]
     
@@ -169,7 +169,7 @@ export function CarouselGenerator() {
     setTimeout(() => setSavedStatus(null), 1500)
   }
 
-  const handleSizeUpdate = (slideIndex: number | "all", size: Slide["size"]) => {
+  const handleSizeUpdate = (slideIndex: number | "all", size: Slide["size"]): void => {
     if (!carouselData) return
     const slidesToUpdate = slideIndex === "all" ? carouselData.slides.map((_, i) => i) : [slideIndex]
     
@@ -188,7 +188,7 @@ export function CarouselGenerator() {
     setTimeout(() => setSavedStatus(null), 1500)
   }
 
-  const handleLayoutUpdate = (slideIndex: number | "all", layout: Partial<Slide["layout"]>) => {
+  const handleLayoutUpdate = (slideIndex: number | "all", layout: Partial<Slide["layout"]>): void => {
     if (!carouselData) return
     const slidesToUpdate = slideIndex === "all" ? carouselData.slides.map((_, i) => i) : [slideIndex]
     
@@ -214,7 +214,7 @@ export function CarouselGenerator() {
     setTimeout(() => setSavedStatus(null), 1500)
   }
 
-  const handleLayerVisibility = (slideIndex: number, layerId: string) => {
+  const handleLayerVisibility = (slideIndex: number, layerId: string): void => {
     if (!carouselData) return
     const updatedSlides = carouselData.slides.map((slide, index) => {
       if (index === slideIndex) {
@@ -230,7 +230,7 @@ export function CarouselGenerator() {
     if (selectedLayerId === layerId) setSelectedLayerId(null)
   }
 
-  const handleAddLayer = (slideIndex: number, type: Layer["type"]) => {
+  const handleAddLayer = (slideIndex: number, type: Layer["type"]): void => {
     if (!carouselData) return
     const newLayer: Layer = {
       id: generateLayerId(),
@@ -259,7 +259,7 @@ export function CarouselGenerator() {
     setSelectedLayerId(newLayer.id)
   }
 
-  const handleDeleteLayer = (slideIndex: number, layerId: string) => {
+  const handleDeleteLayer = (slideIndex: number, layerId: string): void => {
     if (!carouselData) return
     const updatedSlides = carouselData.slides.map((slide, index) => {
       if (index === slideIndex) {
@@ -275,7 +275,7 @@ export function CarouselGenerator() {
     if (selectedLayerId === layerId) setSelectedLayerId(null)
   }
 
-  const handleAddSlide = (afterIndex: number) => {
+  const handleAddSlide = (afterIndex: number): void => {
     if (!carouselData) return
     const newSlide: CarouselData["slides"][0] = {
       index: afterIndex + 1,
@@ -306,7 +306,7 @@ export function CarouselGenerator() {
     setSelectedLayerId(null)
   }
 
-  const handleDeleteSlide = (slideIndex: number) => {
+  const handleDeleteSlide = (slideIndex: number): void => {
     if (!carouselData || carouselData.slides.length <= 1) return
     
     const updatedSlides = carouselData.slides
@@ -333,7 +333,7 @@ export function CarouselGenerator() {
     setSelectedLayerId(null)
   }
 
-  const handleReorderSlides = (fromIndex: number, toIndex: number) => {
+  const handleReorderSlides = (fromIndex: number, toIndex: number): void => {
     if (!carouselData) return
     
     const updatedSlides = [...carouselData.slides]
@@ -362,17 +362,17 @@ export function CarouselGenerator() {
     setSelectedLayerId(null)
   }
 
-  const handleDragStart = (e: React.DragEvent, layerId: string) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, layerId: string): void => {
     setDraggedLayerId(layerId)
     e.dataTransfer.effectAllowed = "move"
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
     e.preventDefault()
     e.dataTransfer.dropEffect = "move"
   }
 
-  const handleDrop = (e: React.DragEvent, targetLayerId: string) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetLayerId: string): void => {
     e.preventDefault()
     if (!carouselData || !draggedLayerId || draggedLayerId === targetLayerId) {
       setDraggedLayerId(null)
@@ -402,11 +402,11 @@ export function CarouselGenerator() {
     setDraggedLayerId(null)
   }
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (): void => {
     setDraggedLayerId(null)
   }
 
-  const handleSelectLayer = (layerId: string) => {
+  const handleSelectLayer = (layerId: string): void => {
     setSelectedLayerId(layerId)
   }
 
