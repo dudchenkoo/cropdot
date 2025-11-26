@@ -110,34 +110,42 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
                 return (
                   <div key={`${layer.id}-${styleKey}`}>
                     {layer.type === "heading" && (
-                      <h3 className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-lg", styleClass)} style={style}>
-                        {layer.style?.listType === "ordered" ? (
-                          <ol className="list-decimal list-inside space-y-1">
-                            {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
-                          </ol>
-                        ) : layer.style?.listType === "unordered" ? (
-                          <ul className="list-disc list-inside space-y-1">
-                            {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
-                          </ul>
-                        ) : (
-                          layer.content
-                        )}
-                      </h3>
+                      layer.style?.listType ? (
+                        <div className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-lg", styleClass)} style={style}>
+                          {layer.style.listType === "ordered" ? (
+                            <ol className="list-decimal list-inside space-y-1">
+                              {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
+                            </ol>
+                          ) : (
+                            <ul className="list-disc list-inside space-y-1">
+                              {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
+                            </ul>
+                          )}
+                        </div>
+                      ) : (
+                        <h3 className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-lg", styleClass)} style={style}>
+                          {layer.content}
+                        </h3>
+                      )
                     )}
                     {layer.type === "subheading" && (
-                      <h4 className={cn("text-muted-foreground font-medium", compact ? "text-xs" : "text-sm", styleClass)} style={style}>
-                        {layer.style?.listType === "ordered" ? (
-                          <ol className="list-decimal list-inside space-y-1">
-                            {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
-                          </ol>
-                        ) : layer.style?.listType === "unordered" ? (
-                          <ul className="list-disc list-inside space-y-1">
-                            {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
-                          </ul>
-                        ) : (
-                          layer.content
-                        )}
-                      </h4>
+                      layer.style?.listType ? (
+                        <div className={cn("text-muted-foreground font-medium", compact ? "text-xs" : "text-sm", styleClass)} style={style}>
+                          {layer.style.listType === "ordered" ? (
+                            <ol className="list-decimal list-inside space-y-1">
+                              {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
+                            </ol>
+                          ) : (
+                            <ul className="list-disc list-inside space-y-1">
+                              {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
+                            </ul>
+                          )}
+                        </div>
+                      ) : (
+                        <h4 className={cn("text-muted-foreground font-medium", compact ? "text-xs" : "text-sm", styleClass)} style={style}>
+                          {layer.content}
+                        </h4>
+                      )
                     )}
                     {layer.type === "body" && (
                       layer.style?.listType ? (
