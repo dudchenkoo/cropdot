@@ -3,14 +3,16 @@
 import type React from "react"
 import { useState } from "react"
 import { Inter_Tight } from "next/font/google"
-import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, FileJson } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { templates, type Template } from "@/lib/templates"
 import { CarouselForm } from "./carousel-form"
 import { CarouselPreview } from "./carousel-preview"
 import { Header } from "./header"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { exportCarouselToJSON } from "@/lib/export"
+import { useToast } from "@/hooks/use-toast"
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -77,6 +79,7 @@ export function CarouselGenerator() {
   const [savedStatus, setSavedStatus] = useState<string | null>(null)
   const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
+  const { toast } = useToast()
 
   const handleGenerate = (data: CarouselData) => {
     const dataWithLayers = {
@@ -91,6 +94,32 @@ export function CarouselGenerator() {
     setSelectedSlideIndex(0)
     setSelectedLayerId(null)
     setViewMode("creation")
+  }
+
+  const handleExportJSON = () => {
+    if (!carouselData) {
+      toast({
+        title: "No carousel to export",
+        description: "Generate a carousel before exporting.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      exportCarouselToJSON(carouselData)
+      toast({
+        title: "Exporting carousel",
+        description: "A JSON file download has started.",
+      })
+    } catch (error) {
+      console.error("Error exporting carousel to JSON:", error)
+      toast({
+        title: "Export failed",
+        description: "Unable to export carousel right now.",
+        variant: "destructive",
+      })
+    }
   }
 
   const updateCarouselData = (updatedData: CarouselData) => {
@@ -618,18 +647,41 @@ export function CarouselGenerator() {
                   <div className="px-4 py-2">
                     {/* Action buttons */}
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setSelectedAction(selectedAction === "export" ? null : "export")}
-                        className={cn(
-                          "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
-                          selectedAction === "export"
-                            ? "bg-accent/20 text-accent"
-                            : "text-muted-foreground hover:text-white hover:bg-white/5"
-                        )}
-                      >
-                        <Upload className="w-4 h-4" />
-                        <span className="text-[10px]">Export</span>
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className={cn(
+                              "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
+                              selectedAction === "export"
+                                ? "bg-accent/20 text-accent"
+                                : "text-muted-foreground hover:text-white hover:bg-white/5"
+                            )}
+                          >
+                            <Upload className="w-4 h-4" />
+                            <span className="text-[10px]">Export</span>
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-48">
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setSelectedAction(selectedAction === "export" ? null : "export")
+                            }}
+                            disabled={!carouselData}
+                          >
+                            <Upload className="w-4 h-4" />
+                            <span className="text-sm">Export as PNG</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              handleExportJSON()
+                            }}
+                            disabled={!carouselData}
+                          >
+                            <FileJson className="w-4 h-4" />
+                            <span className="text-sm">Export as JSON</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <button
                         onClick={() => setSelectedAction(selectedAction === "template" ? null : "template")}
                         className={cn(
