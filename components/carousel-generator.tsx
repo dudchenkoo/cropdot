@@ -722,23 +722,25 @@ export function CarouselGenerator(): JSX.Element {
             <Header subtitle={undefined} onBack={undefined} onLogoClick={() => setViewMode("dashboard")} />
 
             <div className="flex flex-1 flex-col overflow-hidden">
-            {/* Dashboard Title Section */}
-            <div className="border-b border-border px-6 py-4">
-              <div className="max-w-7xl mx-auto flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
-                  <span className="text-sm text-muted-foreground">{savedCarousels.length} generations</span>
+            {/* Dashboard Title Section - only show if we have generated content */}
+            {savedCarousels.length > 0 && (
+              <div className="border-b border-border px-6 py-4">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
+                    <span className="text-sm text-muted-foreground">{savedCarousels.length} generations</span>
+                  </div>
+                  <button
+                    aria-label="Create new carousel generation"
+                    onClick={() => setViewMode("creation")}
+                    className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-border text-sm font-medium transition-colors cursor-pointer flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    New generation
+                  </button>
                 </div>
-                <button
-                  aria-label="Create new carousel generation"
-                  onClick={() => setViewMode("creation")}
-                  className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-border text-sm font-medium transition-colors cursor-pointer flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  New generation
-                </button>
               </div>
-            </div>
+            )}
 
             {/* Main Content Area */}
             <section
