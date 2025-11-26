@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Inter_Tight } from "next/font/google"
-import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Undo2, Redo2 } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { templates, type Template } from "@/lib/templates"
 import { CarouselForm } from "./carousel-form"
@@ -11,6 +11,8 @@ import { CarouselPreview } from "./carousel-preview"
 import { Header } from "./header"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { toast } from "@/hooks/use-toast"
+import { canRedo, canUndo, createHistory, pushState, redo as redoHistory, undo as undoHistory, type HistoryState } from "@/lib/history"
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -67,7 +69,8 @@ function getPatternBackground(
 }
 
 export function CarouselGenerator() {
-  const [carouselData, setCarouselData] = useState<CarouselData | null>(null)
+  const [history, setHistory] = useState<HistoryState<CarouselData | null>>(() => createHistory<CarouselData | null>(null, 50))
+  const carouselData = history.present
   const [isLoading, setIsLoading] = useState(false)
   const [viewMode, setViewMode] = useState<"dashboard" | "creation">("dashboard")
   const [savedCarousels, setSavedCarousels] = useState<CarouselData[]>([])
@@ -78,6 +81,18 @@ export function CarouselGenerator() {
   const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
 
+  const commitCarouselChange = useCallback(
+    (updatedData: CarouselData, statusMessage?: string) => {
+      setHistory((current) => pushState(current, updatedData))
+
+      if (statusMessage) {
+        setSavedStatus(statusMessage)
+        setTimeout(() => setSavedStatus(null), 1500)
+      }
+    },
+    [],
+  )
+
   const handleGenerate = (data: CarouselData) => {
     const dataWithLayers = {
       ...data,
@@ -86,26 +101,97 @@ export function CarouselGenerator() {
         layers: slide.layers?.length ? slide.layers : slideToLayers(slide),
       })),
     }
-    setCarouselData(dataWithLayers)
-    setSavedCarousels((prev) => [...prev, dataWithLayers])
+
+    setHistory(createHistory(dataWithLayers, 50))
+    setSavedCarousels((prev) => {
+      const index = prev.findIndex((c) => c.topic === dataWithLayers.topic && c.platform === dataWithLayers.platform)
+      if (index !== -1) {
+        const updated = [...prev]
+        updated[index] = dataWithLayers
+        return updated
+      }
+      return [...prev, dataWithLayers]
+    })
     setSelectedSlideIndex(0)
     setSelectedLayerId(null)
     setViewMode("creation")
   }
 
-  const updateCarouselData = (updatedData: CarouselData) => {
-    setCarouselData(updatedData)
-    // Also update savedCarousels if this carousel is in the list
+  const updateCarouselData = (updatedData: CarouselData, statusMessage?: string) => {
+    commitCarouselChange(updatedData, statusMessage)
+  }
+
+  useEffect(() => {
+    if (!carouselData) return
+
     setSavedCarousels((prev) => {
-      const index = prev.findIndex((c) => c.topic === updatedData.topic && c.platform === updatedData.platform)
+      const index = prev.findIndex((c) => c.topic === carouselData.topic && c.platform === carouselData.platform)
       if (index !== -1) {
         const updated = [...prev]
-        updated[index] = updatedData
+        updated[index] = carouselData
         return updated
       }
-      return prev
+      return [...prev, carouselData]
     })
-  }
+  }, [carouselData])
+
+  useEffect(() => {
+    if (!carouselData) {
+      setSelectedSlideIndex(0)
+      setSelectedLayerId(null)
+      return
+    }
+
+    const maxIndex = Math.max(0, carouselData.slides.length - 1)
+    if (selectedSlideIndex > maxIndex) {
+      setSelectedSlideIndex(maxIndex)
+    }
+
+    const slide = carouselData.slides[Math.min(selectedSlideIndex, maxIndex)]
+    if (selectedLayerId && !slide?.layers.some((layer) => layer.id === selectedLayerId)) {
+      setSelectedLayerId(null)
+    }
+  }, [carouselData, selectedLayerId, selectedSlideIndex])
+
+  const handleUndo = useCallback(() => {
+    setHistory((current) => {
+      if (!canUndo(current)) return current
+
+      const next = undoHistory(current)
+      toast({ title: "Undo", description: "Reverted to the previous change." })
+      return next
+    })
+  }, [])
+
+  const handleRedo = useCallback(() => {
+    setHistory((current) => {
+      if (!canRedo(current)) return current
+
+      const next = redoHistory(current)
+      toast({ title: "Redo", description: "Reapplied the last change." })
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isUndoShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z" && !event.shiftKey
+      const isRedoShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z" && event.shiftKey
+
+      if (!carouselData || viewMode !== "creation") return
+
+      if (isUndoShortcut) {
+        event.preventDefault()
+        handleUndo()
+      } else if (isRedoShortcut) {
+        event.preventDefault()
+        handleRedo()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [carouselData, handleRedo, handleUndo, viewMode])
 
   const handleLayerUpdate = (slideIndex: number, layerId: string, content: string) => {
     if (!carouselData) return
@@ -119,9 +205,7 @@ export function CarouselGenerator() {
       return slide
     })
     const updatedData = { ...carouselData, slides: updatedSlides }
-    updateCarouselData(updatedData)
-    setSavedStatus("Changes saved")
-    setTimeout(() => setSavedStatus(null), 1500)
+    updateCarouselData(updatedData, "Changes saved")
   }
 
   const handleLayerStyleUpdate = (slideIndex: number, layerId: string, style: Partial<Layer["style"]>) => {
@@ -148,9 +232,7 @@ export function CarouselGenerator() {
       return slide
     })
     const updatedData = { ...carouselData, slides: updatedSlides }
-    updateCarouselData(updatedData)
-    setSavedStatus("Changes saved")
-    setTimeout(() => setSavedStatus(null), 1500)
+    updateCarouselData(updatedData, "Changes saved")
   }
 
   const handleBackgroundUpdate = (slideIndex: number | "all", background: Partial<Slide["background"]>) => {
@@ -174,9 +256,7 @@ export function CarouselGenerator() {
       return slide
     })
     const updatedData = { ...carouselData, slides: updatedSlides }
-    updateCarouselData(updatedData)
-    setSavedStatus("Changes saved")
-    setTimeout(() => setSavedStatus(null), 1500)
+    updateCarouselData(updatedData, "Changes saved")
   }
 
   const handleSizeUpdate = (slideIndex: number | "all", size: Slide["size"]) => {
@@ -193,9 +273,7 @@ export function CarouselGenerator() {
       return slide
     })
     const updatedData = { ...carouselData, slides: updatedSlides }
-    updateCarouselData(updatedData)
-    setSavedStatus("Changes saved")
-    setTimeout(() => setSavedStatus(null), 1500)
+    updateCarouselData(updatedData, "Changes saved")
   }
 
   const handleLayoutUpdate = (slideIndex: number | "all", layout: Partial<Slide["layout"]>) => {
@@ -215,9 +293,7 @@ export function CarouselGenerator() {
       return slide
     })
     const updatedData = { ...carouselData, slides: updatedSlides }
-    updateCarouselData(updatedData)
-    setSavedStatus("Changes saved")
-    setTimeout(() => setSavedStatus(null), 1500)
+    updateCarouselData(updatedData, "Changes saved")
   }
 
   const handleLayerVisibility = (slideIndex: number, layerId: string) => {
@@ -548,7 +624,9 @@ export function CarouselGenerator() {
                         <button
                           key={index}
                           onClick={() => {
-                            setCarouselData(carousel)
+                            setHistory(createHistory(carousel, 50))
+                            setSelectedSlideIndex(0)
+                            setSelectedLayerId(null)
                             setViewMode("creation")
                           }}
                           className="p-4 rounded-lg border border-border bg-background hover:border-white/20 hover:bg-white/5 transition-colors cursor-pointer text-left"
@@ -772,33 +850,55 @@ export function CarouselGenerator() {
           <aside className="w-[380px] border-l border-border flex flex-col bg-background">
             {carouselData ? (
               <div className="flex flex-col h-full">
-                <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    {selectedAction && (
-                      <button
-                        onClick={() => {
-                          setSelectedAction(null)
-                        }}
-                        className="p-1 rounded hover:bg-white/10 transition-colors"
-                      >
-                        <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                    )}
-                    <span className="text-sm font-medium">
-                      {selectedAction === "text" ? "Text Styling" :
-                       selectedAction === "background" ? "Background Settings" :
-                       selectedAction === "template" ? "Template" :
-                       selectedAction === "layout" ? "Layout" :
-                       selectedAction === "size" ? "Size" :
-                       "Edit slide"}
-                    </span>
+                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      {selectedAction && (
+                        <button
+                          onClick={() => {
+                            setSelectedAction(null)
+                          }}
+                          className="p-1 rounded hover:bg-white/10 transition-colors"
+                        >
+                          <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      )}
+                      <span className="text-sm font-medium">
+                        {selectedAction === "text" ? "Text Styling" :
+                         selectedAction === "background" ? "Background Settings" :
+                         selectedAction === "template" ? "Template" :
+                         selectedAction === "layout" ? "Layout" :
+                         selectedAction === "size" ? "Size" :
+                         "Edit slide"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!selectedAction && (
+                        <span className="text-xs text-muted-foreground">
+                          {selectedSlideIndex + 1} / {carouselData.slides.length}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleUndo}
+                          disabled={!canUndo(history)}
+                          className="h-8 w-8"
+                        >
+                          <Undo2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleRedo}
+                          disabled={!canRedo(history)}
+                          className="h-8 w-8"
+                        >
+                          <Redo2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  {!selectedAction && (
-                    <span className="text-xs text-muted-foreground">
-                      {selectedSlideIndex + 1} / {carouselData.slides.length}
-                    </span>
-                  )}
-                </div>
 
                 <div className="flex-1 overflow-auto">
                   {/* Text Styling View */}
@@ -1269,9 +1369,7 @@ export function CarouselGenerator() {
                                   return slide
                                 })
                                 const updatedData = { ...carouselData, slides: updatedSlides }
-                                updateCarouselData(updatedData)
-                                setSavedStatus("Template applied")
-                                setTimeout(() => setSavedStatus(null), 1500)
+                                updateCarouselData(updatedData, "Template applied")
                               }}
                               className="group relative overflow-hidden rounded-lg border-2 border-white/10 hover:border-accent/50 transition-all bg-white/5 hover:bg-white/10"
                             >
@@ -1549,11 +1647,9 @@ export function CarouselGenerator() {
                               }
                               return slide
                             })
-                            const updatedData = { ...carouselData, slides: updatedSlides }
-                            updateCarouselData(updatedData)
-                            setSavedStatus("Changes saved")
-                            setTimeout(() => setSavedStatus(null), 1500)
-                          }}
+                              const updatedData = { ...carouselData, slides: updatedSlides }
+                              updateCarouselData(updatedData, "Changes saved")
+                            }}
                           className="text-xs bg-white/5 border border-white/10 rounded px-2 py-1 cursor-pointer"
                         >
                           <option value="heading">Heading</option>
