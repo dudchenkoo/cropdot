@@ -204,40 +204,6 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
               <div className="w-80" />
             )}
             </div>
-            
-            {/* Pagination controls pinned under slide */}
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
-                disabled={currentSlide === 0}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-
-              <div className="flex items-center gap-2">
-                {slides.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentSlide(i)}
-                    className={cn(
-                      "w-2 h-2 rounded-full transition-colors",
-                      i === currentSlide ? "bg-accent" : "bg-border",
-                    )}
-                  />
-                ))}
-              </div>
-
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
-                disabled={currentSlide === slides.length - 1}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
 
             {/* Alignment and random color controls */}
             <div className="flex items-center justify-center gap-3 mt-6">
