@@ -173,25 +173,38 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
   return (
     <form onSubmit={onSubmit} className="space-y-3 text-sm" noValidate>
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">Topic</label>
+        <label className="text-xs text-muted-foreground" htmlFor="carousel-topic">Topic</label>
+        <p id="carousel-topic-description" className="sr-only">
+          Enter the main subject you want the carousel to cover.
+        </p>
         <input
+          id="carousel-topic"
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-muted-foreground transition-colors"
           placeholder="How to grow on LinkedIn in 2025"
           aria-invalid={!!errors.topic}
+          aria-describedby="carousel-topic-description"
           {...register("topic")}
         />
+        <p id="carousel-topic-description" className="sr-only">
+          Enter the main topic or subject for your carousel
+        </p>
         {errors.topic && (
           <p className="text-xs text-destructive">{errors.topic.message}</p>
         )}
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">Goal</label>
+        <label className="text-xs text-muted-foreground" htmlFor="carousel-goal">Goal</label>
+        <p id="carousel-goal-description" className="sr-only">
+          Describe the outcome you want readers to achieve after viewing the carousel.
+        </p>
         <textarea
+          id="carousel-goal"
           rows={3}
           className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-muted-foreground transition-colors"
           placeholder="Explain what the user will learn, why it matters, and what action they should take."
           aria-invalid={!!errors.goal}
+          aria-describedby="carousel-goal-description"
           {...register("goal")}
         />
         {errors.goal && (
@@ -217,6 +230,8 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
                   }
                 `}
                 style={isSelected ? { borderColor: `${p.color}80` } : {}}
+                aria-label={`Select ${p.label} as platform`}
+                aria-pressed={isSelected}
               >
                 <span className={`text-sm font-medium ${isSelected ? "text-white" : "text-muted-foreground"}`}>
                   {p.label}
@@ -256,6 +271,8 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
                     : "border-border bg-background hover:border-white/20 hover:bg-white/5"
                   }
                 `}
+                aria-label={`Use a ${t.label.toLowerCase()} tone`}
+                aria-pressed={isSelected}
               >
                 <span className={`text-sm font-medium ${isSelected ? "text-white" : "text-muted-foreground"}`}>
                   {t.label}
@@ -282,6 +299,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         type="submit"
         disabled={isLoading || !watch("topic")?.trim()}
         className="mt-1 w-full rounded-lg bg-[#e8e4df] py-2 text-sm font-medium text-[#1a1a1a] hover:bg-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        aria-label="Generate carousel with AI"
       >
         {isLoading ? (
           <>

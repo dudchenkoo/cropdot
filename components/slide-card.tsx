@@ -49,6 +49,7 @@ export function SlideCard({ slide, index, total, compact = false, onDelete }: Sl
             compact ? "h-6 w-6" : "h-8 w-8"
           )}
           title="Delete slide"
+          aria-label={`Delete slide ${index + 1}`}
         >
           <Trash2 className={cn(compact ? "w-3 h-3" : "w-4 h-4")} />
         </Button>
