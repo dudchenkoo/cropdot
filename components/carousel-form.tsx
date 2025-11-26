@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useState } from "react"
 
 import type { CarouselData, Platform } from "@/lib/carousel-types"
 import { isCarouselData } from "@/lib/carousel-types"
