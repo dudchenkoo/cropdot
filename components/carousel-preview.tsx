@@ -4,7 +4,7 @@ import { useState } from "react"
 import type { CarouselData } from "@/lib/carousel-types"
 import { SlideCard } from "./slide-card"
 import { Button } from "@/components/ui/button"
-import { Layers, Square, Grid3x3, Plus, ChevronLeft, ChevronRight, Copy, Trash2 } from "lucide-react"
+import { Layers, Square, Grid3x3, Plus, ChevronLeft, ChevronRight, Copy, Trash2, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, Shuffle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface CarouselPreviewProps {
@@ -16,9 +16,12 @@ interface CarouselPreviewProps {
   onDeleteSlide?: (index: number) => void
   onDuplicateSlide?: (index: number) => void
   onReorderSlides?: (fromIndex: number, toIndex: number) => void
+  onCycleHorizontalAlign?: (index: number) => void
+  onCycleVerticalAlign?: (index: number) => void
+  onRandomBackgroundColor?: (index: number) => void
 }
 
-export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide, onSlideChange, onAddSlide, onDeleteSlide, onDuplicateSlide, onReorderSlides }: CarouselPreviewProps) {
+export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide, onSlideChange, onAddSlide, onDeleteSlide, onDuplicateSlide, onReorderSlides, onCycleHorizontalAlign, onCycleVerticalAlign, onRandomBackgroundColor }: CarouselPreviewProps) {
   const [internalSlide, setInternalSlide] = useState(0)
   const [viewMode, setViewMode] = useState<"single" | "grid">("single")
   const [draggedSlideIndex, setDraggedSlideIndex] = useState<number | null>(null)
@@ -234,6 +237,61 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
+            </div>
+
+            {/* Alignment and random color controls */}
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-background/95 backdrop-blur-sm">
+                {/* Horizontal Alignment */}
+                {onCycleHorizontalAlign && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onCycleHorizontalAlign(currentSlide)}
+                    title="Horizontal alignment"
+                  >
+                    {(() => {
+                      const currentAlign = slides[currentSlide]?.layout?.horizontalAlign || "left"
+                      if (currentAlign === "left") return <AlignLeft className="w-4 h-4" />
+                      if (currentAlign === "center") return <AlignCenter className="w-4 h-4" />
+                      return <AlignRight className="w-4 h-4" />
+                    })()}
+                  </Button>
+                )}
+
+                {/* Vertical Alignment */}
+                {onCycleVerticalAlign && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onCycleVerticalAlign(currentSlide)}
+                    title="Vertical alignment"
+                  >
+                    {(() => {
+                      const currentAlign = slides[currentSlide]?.layout?.verticalAlign || "stretch"
+                      if (currentAlign === "top") return <AlignVerticalJustifyStart className="w-4 h-4" />
+                      if (currentAlign === "center") return <AlignVerticalJustifyCenter className="w-4 h-4" />
+                      if (currentAlign === "bottom") return <AlignVerticalJustifyEnd className="w-4 h-4" />
+                      return <AlignVerticalDistributeCenter className="w-4 h-4" />
+                    })()}
+                  </Button>
+                )}
+              </div>
+
+              {/* Random Color Button */}
+              {onRandomBackgroundColor && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 border border-border rounded-lg bg-background/95 backdrop-blur-sm"
+                  onClick={() => onRandomBackgroundColor(currentSlide)}
+                  title="Random background color"
+                >
+                  <Shuffle className="w-4 h-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>

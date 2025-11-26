@@ -3,7 +3,7 @@
 import type React from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Inter_Tight } from "next/font/google"
-import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FilePlus, Keyboard, Undo2, Redo2, FolderOpen, X } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FilePlus, Keyboard, Undo2, Redo2, FolderOpen, X, Shuffle } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { templates, type Template } from "@/lib/templates"
 import {
@@ -439,6 +439,31 @@ export function CarouselGenerator(): JSX.Element {
     updateCarouselData(updatedData, "Changes saved")
   }
 
+  const handleCycleHorizontalAlign = (slideIndex: number): void => {
+    if (!carouselData) return
+    const currentAlign = carouselData.slides[slideIndex]?.layout?.horizontalAlign || DEFAULT_HORIZONTAL_ALIGN
+    const alignments: ("left" | "center" | "right")[] = ["left", "center", "right"]
+    const currentIndex = alignments.indexOf(currentAlign)
+    const nextIndex = (currentIndex + 1) % alignments.length
+    handleLayoutUpdate(slideIndex, { horizontalAlign: alignments[nextIndex] })
+  }
+
+  const handleCycleVerticalAlign = (slideIndex: number): void => {
+    if (!carouselData) return
+    const currentAlign = carouselData.slides[slideIndex]?.layout?.verticalAlign || DEFAULT_VERTICAL_ALIGN
+    const alignments: ("top" | "center" | "bottom" | "stretch")[] = ["top", "center", "bottom", "stretch"]
+    const currentIndex = alignments.indexOf(currentAlign)
+    const nextIndex = (currentIndex + 1) % alignments.length
+    handleLayoutUpdate(slideIndex, { verticalAlign: alignments[nextIndex] })
+  }
+
+  const handleRandomBackgroundColor = (slideIndex: number): void => {
+    if (!carouselData) return
+    // Generate a random color (darker colors work better for carousels)
+    const randomColor = `#${Math.floor(Math.random() * 0x808080 + 0x202020).toString(16).padStart(6, '0')}`
+    handleBackgroundUpdate(slideIndex, { color: randomColor })
+  }
+
   const handleLayerVisibility = (slideIndex: number, layerId: string): void => {
     if (!carouselData) return
     const updatedSlides = carouselData.slides.map((slide, index) => {
@@ -868,6 +893,9 @@ export function CarouselGenerator(): JSX.Element {
                         onDeleteSlide={handleDeleteSlide}
                         onDuplicateSlide={handleDuplicateSlide}
                         onReorderSlides={handleReorderSlides}
+                        onCycleHorizontalAlign={handleCycleHorizontalAlign}
+                        onCycleVerticalAlign={handleCycleVerticalAlign}
+                        onRandomBackgroundColor={handleRandomBackgroundColor}
                       />
                     </ErrorBoundary>
                   </div>
