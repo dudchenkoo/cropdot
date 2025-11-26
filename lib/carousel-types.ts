@@ -115,12 +115,20 @@ const isOptionalTextTransform = (value: unknown): value is TextTransform | undef
 const isOptionalPatternType = (value: unknown): value is PatternType | undefined =>
   value === undefined || value === null || patternTypes.includes(value as Exclude<PatternType, null>)
 
+const isOptionalListType = (value: unknown): value is "ordered" | "unordered" | null | undefined =>
+  value === undefined || value === null || value === "ordered" || value === "unordered"
+
 const isLayerStyle = (value: unknown): value is LayerStyle =>
   isRecord(value) &&
   isOptionalString(value.highlightColor) &&
   isOptionalString(value.fontFamily) &&
   isOptionalString(value.fontSize) &&
-  isOptionalTextTransform(value.textTransform)
+  isOptionalTextTransform(value.textTransform) &&
+  (value.bold === undefined || typeof value.bold === "boolean") &&
+  (value.italic === undefined || typeof value.italic === "boolean") &&
+  (value.underline === undefined || typeof value.underline === "boolean") &&
+  (value.strikethrough === undefined || typeof value.strikethrough === "boolean") &&
+  isOptionalListType(value.listType)
 
 export const isLayer = (value: unknown): value is Layer =>
   isRecord(value) &&
