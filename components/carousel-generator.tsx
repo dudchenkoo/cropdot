@@ -1012,42 +1012,6 @@ export function CarouselGenerator(): JSX.Element {
                         
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveCarousel}>
-                              <Save className="w-4 h-4" />
-                              Save
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs">Save carousel</span>
-                              <KbdGroup>
-                                <Kbd>Cmd/Ctrl</Kbd>
-                                <Kbd>S</Kbd>
-                              </KbdGroup>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                        
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" className="gap-2" onClick={handleNewCarousel}>
-                              <FilePlus className="w-4 h-4" />
-                              New
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs">Start a new carousel</span>
-                              <KbdGroup>
-                                <Kbd>Cmd/Ctrl</Kbd>
-                                <Kbd>N</Kbd>
-                              </KbdGroup>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                        
-                        <Tooltip>
-                          <TooltipTrigger asChild>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1064,27 +1028,6 @@ export function CarouselGenerator(): JSX.Element {
                             </div>
                           </TooltipContent>
                         </Tooltip>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={handleSaveCarousel}
-                          disabled={!carouselData}
-                          className="flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Save className="h-4 w-4" />
-                          Save
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSavedCarousels(loadCarousel())
-                            setIsLoadModalOpen(true)
-                          }}
-                          className="flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10"
-                        >
-                          <FolderOpen className="h-4 w-4" />
-                          Load
-                        </button>
                       </div>
                     </div>
                   </div>
