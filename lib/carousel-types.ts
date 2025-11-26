@@ -82,6 +82,14 @@ export interface CarouselData {
   platform: Platform
   slides: Slide[]
   summary: string
+  header?: {
+    enabled: boolean
+    text: string
+  }
+  footer?: {
+    enabled: boolean
+    text: string
+  }
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -155,10 +163,17 @@ export const isSlide = (value: unknown): value is Slide =>
   (value.layout === undefined || isSlideLayout(value.layout)) &&
   (value.background === undefined || isSlideBackground(value.background))
 
+const isHeaderFooter = (value: unknown): value is { enabled: boolean; text: string } =>
+  isRecord(value) &&
+  typeof value.enabled === "boolean" &&
+  typeof value.text === "string"
+
 export const isCarouselData = (value: unknown): value is CarouselData =>
   isRecord(value) &&
   typeof value.topic === "string" &&
   platforms.includes(value.platform as Platform) &&
   typeof value.summary === "string" &&
   Array.isArray(value.slides) &&
-  value.slides.every(isSlide)
+  value.slides.every(isSlide) &&
+  (value.header === undefined || isHeaderFooter(value.header)) &&
+  (value.footer === undefined || isHeaderFooter(value.footer))

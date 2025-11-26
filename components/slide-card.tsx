@@ -13,9 +13,11 @@ interface SlideCardProps {
   total: number
   compact?: boolean
   onDelete?: (index: number) => void
+  header?: { enabled: boolean; text: string }
+  footer?: { enabled: boolean; text: string }
 }
 
-export function SlideCard({ slide, index, total, compact = false, onDelete }: SlideCardProps) {
+export function SlideCard({ slide, index, total, compact = false, onDelete, header, footer }: SlideCardProps) {
   const isFirst = index === 0
   const isLast = index === total - 1
 
@@ -38,6 +40,13 @@ export function SlideCard({ slide, index, total, compact = false, onDelete }: Sl
       )}
       style={backgroundStyle}
     >
+      {/* Header */}
+      {header?.enabled && header.text && (
+        <div className="absolute top-0 left-0 right-0 px-4 py-2 text-xs text-muted-foreground border-b border-white/10 bg-background/50 backdrop-blur-sm z-10">
+          {header.text}
+        </div>
+      )}
+
       {onDelete && total > 1 && (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -208,12 +217,21 @@ export function SlideCard({ slide, index, total, compact = false, onDelete }: Sl
         )}
       </div>
 
-      <div className={cn("flex items-center justify-between mt-4 pt-4 border-t border-border", compact && "hidden")}>
-        <span className="text-xs text-muted-foreground uppercase tracking-wider">{slide.type}</span>
-        <span className="text-xs text-muted-foreground">
-          {index + 1}/{total}
-        </span>
-      </div>
+      {/* Footer */}
+      {footer?.enabled && footer.text ? (
+        <div className="mt-4 pt-3 border-t border-white/10 text-xs text-muted-foreground">
+          {footer.text}
+        </div>
+      ) : (
+        !compact && (
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+            <span className="text-xs text-muted-foreground uppercase tracking-wider">{slide.type}</span>
+            <span className="text-xs text-muted-foreground">
+              {index + 1}/{total}
+            </span>
+          </div>
+        )
+      )}
     </div>
   )
 }

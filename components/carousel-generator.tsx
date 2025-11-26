@@ -3,7 +3,7 @@
 import type React from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Inter_Tight } from "next/font/google"
-import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FilePlus, Keyboard, Undo2, Redo2, FolderOpen, X, Shuffle } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FilePlus, Keyboard, Undo2, Redo2, FolderOpen, X, Shuffle, Info } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { templates, type Template } from "@/lib/templates"
 import {
@@ -39,6 +39,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { registerKeyboardShortcuts, type ShortcutConfig } from "@/lib/keyboard"
 import { toast } from "@/hooks/use-toast"
@@ -73,7 +74,7 @@ export function CarouselGenerator(): JSX.Element {
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
   const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null)
   const [savedStatus, setSavedStatus] = useState<string | null>(null)
-  const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | null>(null)
+  const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | "info" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
   const actionPanelRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
@@ -462,6 +463,24 @@ export function CarouselGenerator(): JSX.Element {
     // Generate a random color (darker colors work better for carousels)
     const randomColor = `#${Math.floor(Math.random() * 0x808080 + 0x202020).toString(16).padStart(6, '0')}`
     handleBackgroundUpdate(slideIndex, { color: randomColor })
+  }
+
+  const handleHeaderUpdate = (enabled: boolean, text: string): void => {
+    if (!carouselData) return
+    const updatedData: CarouselData = {
+      ...carouselData,
+      header: { enabled, text },
+    }
+    commitCarouselChange(updatedData, "Header updated")
+  }
+
+  const handleFooterUpdate = (enabled: boolean, text: string): void => {
+    if (!carouselData) return
+    const updatedData: CarouselData = {
+      ...carouselData,
+      footer: { enabled, text },
+    }
+    commitCarouselChange(updatedData, "Footer updated")
   }
 
   const handleLayerVisibility = (slideIndex: number, layerId: string): void => {
@@ -991,6 +1010,19 @@ export function CarouselGenerator(): JSX.Element {
                         <Maximize2 className="w-4 h-4" />
                         <span className="text-[10px]">Size</span>
                       </button>
+                      <button
+                        aria-label="Open info settings"
+                        onClick={() => setSelectedAction(selectedAction === "info" ? null : "info")}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
+                          selectedAction === "info"
+                            ? "bg-accent/20 text-accent"
+                            : "text-muted-foreground hover:text-white hover:bg-white/5"
+                        )}
+                      >
+                        <Info className="w-4 h-4" />
+                        <span className="text-[10px]">Info</span>
+                      </button>
                     </div>
                     <div className="flex items-center gap-2">
                         {savedStatus && (
@@ -1094,6 +1126,7 @@ export function CarouselGenerator(): JSX.Element {
                        selectedAction === "template" ? "Template" :
                        selectedAction === "layout" ? "Layout" :
                        selectedAction === "size" ? "Size" :
+                       selectedAction === "info" ? "Info" :
                        "Edit slide"}
                     </span>
                   </div>
@@ -1826,6 +1859,53 @@ export function CarouselGenerator(): JSX.Element {
                             })}
                           </div>
                         </div>
+                      </div>
+                    </div>
+                  ) : selectedAction === "info" ? (
+                    /* Info Settings View */
+                    <div className="p-4 space-y-4">
+                      {/* Show Header */}
+                      <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium">Show header</label>
+                          <Switch
+                            checked={carouselData.header?.enabled || false}
+                            onCheckedChange={(checked) => handleHeaderUpdate(checked, carouselData.header?.text || "")}
+                            aria-label="Toggle header visibility"
+                          />
+                        </div>
+                        {carouselData.header?.enabled && (
+                          <input
+                            type="text"
+                            value={carouselData.header?.text || ""}
+                            onChange={(e) => handleHeaderUpdate(true, e.target.value)}
+                            placeholder="Enter header text..."
+                            className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm outline-none focus:border-white/20 transition-colors"
+                            aria-label="Header text"
+                          />
+                        )}
+                      </div>
+
+                      {/* Show Footer */}
+                      <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium">Show footer</label>
+                          <Switch
+                            checked={carouselData.footer?.enabled || false}
+                            onCheckedChange={(checked) => handleFooterUpdate(checked, carouselData.footer?.text || "")}
+                            aria-label="Toggle footer visibility"
+                          />
+                        </div>
+                        {carouselData.footer?.enabled && (
+                          <input
+                            type="text"
+                            value={carouselData.footer?.text || ""}
+                            onChange={(e) => handleFooterUpdate(true, e.target.value)}
+                            placeholder="Enter footer text..."
+                            className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm outline-none focus:border-white/20 transition-colors"
+                            aria-label="Footer text"
+                          />
+                        )}
                       </div>
                     </div>
                   ) : (

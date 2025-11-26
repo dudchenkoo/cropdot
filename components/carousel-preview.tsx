@@ -152,6 +152,8 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
                   index={currentSlide - 1} 
                   total={slides.length}
                   onDelete={onDeleteSlide}
+                  header={data.header}
+                  footer={data.footer}
                 />
               </div>
             ) : (
@@ -176,6 +178,8 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
                 index={currentSlide} 
                 total={slides.length}
                 onDelete={onDeleteSlide}
+                header={data.header}
+                footer={data.footer}
               />
             </div>
 
@@ -198,6 +202,8 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
                   index={currentSlide + 1} 
                   total={slides.length}
                   onDelete={onDeleteSlide}
+                  header={data.header}
+                  footer={data.footer}
                 />
               </div>
             ) : (
@@ -321,13 +327,15 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
                 setViewMode("single")
               }}
             >
-              <SlideCard 
-                slide={slide} 
-                index={i} 
-                total={slides.length} 
-                compact
-                onDelete={onDeleteSlide}
-              />
+                       <SlideCard
+                         slide={slide}
+                         index={i}
+                         total={slides.length}
+                         compact
+                         onDelete={onDeleteSlide}
+                         header={data.header}
+                         footer={data.footer}
+                       />
             </div>
           ))}
           </div>
