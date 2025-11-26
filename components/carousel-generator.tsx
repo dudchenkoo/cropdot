@@ -1,16 +1,18 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Inter_Tight } from "next/font/google"
-import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FolderOpen, X } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { templates, type Template } from "@/lib/templates"
+import { loadCarousel, saveCarousel, type StoredCarousel } from "@/lib/storage"
 import { CarouselForm } from "./carousel-form"
 import { CarouselPreview } from "./carousel-preview"
 import { Header } from "./header"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { toast } from "@/hooks/use-toast"
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -70,13 +72,18 @@ export function CarouselGenerator() {
   const [carouselData, setCarouselData] = useState<CarouselData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [viewMode, setViewMode] = useState<"dashboard" | "creation">("dashboard")
-  const [savedCarousels, setSavedCarousels] = useState<CarouselData[]>([])
+  const [savedCarousels, setSavedCarousels] = useState<StoredCarousel[]>([])
   const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0)
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
   const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null)
   const [savedStatus, setSavedStatus] = useState<string | null>(null)
   const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
+  const [isLoadModalOpen, setIsLoadModalOpen] = useState(false)
+
+  useEffect(() => {
+    setSavedCarousels(loadCarousel())
+  }, [])
 
   const handleGenerate = (data: CarouselData) => {
     const dataWithLayers = {
@@ -87,7 +94,6 @@ export function CarouselGenerator() {
       })),
     }
     setCarouselData(dataWithLayers)
-    setSavedCarousels((prev) => [...prev, dataWithLayers])
     setSelectedSlideIndex(0)
     setSelectedLayerId(null)
     setViewMode("creation")
@@ -96,14 +102,45 @@ export function CarouselGenerator() {
   const updateCarouselData = (updatedData: CarouselData) => {
     setCarouselData(updatedData)
     // Also update savedCarousels if this carousel is in the list
-    setSavedCarousels((prev) => {
-      const index = prev.findIndex((c) => c.topic === updatedData.topic && c.platform === updatedData.platform)
-      if (index !== -1) {
-        const updated = [...prev]
-        updated[index] = updatedData
-        return updated
-      }
-      return prev
+    setSavedCarousels((prev) =>
+      prev.map((entry) =>
+        entry.data.topic === updatedData.topic && entry.data.platform === updatedData.platform
+          ? { ...entry, data: updatedData }
+          : entry
+      )
+    )
+  }
+
+  const handleSaveCarousel = () => {
+    if (!carouselData) return
+
+    try {
+      const savedEntry = saveCarousel(carouselData)
+      setSavedCarousels((prev) => [savedEntry, ...prev])
+      toast({
+        title: "Carousel saved",
+        description: "Your carousel was stored in the browser.",
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save carousel."
+      toast({
+        title: "Save failed",
+        description: message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleLoadCarouselSelection = (entry: StoredCarousel) => {
+    setCarouselData(entry.data)
+    setSelectedSlideIndex(0)
+    setSelectedLayerId(null)
+    setViewMode("creation")
+    setIsLoadModalOpen(false)
+
+    toast({
+      title: "Carousel loaded",
+      description: `Loaded ${entry.data.topic}`,
     })
   }
 
@@ -544,18 +581,20 @@ export function CarouselGenerator() {
                 <div className="relative z-10 p-6">
                   <div className="max-w-7xl mx-auto">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {savedCarousels.map((carousel, index) => (
+                      {savedCarousels.map((carousel) => (
                         <button
-                          key={index}
+                          key={carousel.id}
                           onClick={() => {
-                            setCarouselData(carousel)
+                            setCarouselData(carousel.data)
                             setViewMode("creation")
+                            setSelectedSlideIndex(0)
+                            setSelectedLayerId(null)
                           }}
                           className="p-4 rounded-lg border border-border bg-background hover:border-white/20 hover:bg-white/5 transition-colors cursor-pointer text-left"
                         >
-                          <h3 className="font-medium mb-2">{carousel.topic}</h3>
-                          <p className="text-xs text-muted-foreground mb-2">{carousel.platform}</p>
-                          <p className="text-sm text-muted-foreground line-clamp-2">{carousel.summary}</p>
+                          <h3 className="font-medium mb-2">{carousel.data.topic}</h3>
+                          <p className="text-xs text-muted-foreground mb-2">{carousel.data.platform}</p>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{carousel.data.summary}</p>
                         </button>
                       ))}
                     </div>
@@ -617,7 +656,8 @@ export function CarouselGenerator() {
                 <div className="fixed bottom-0 left-0 right-[380px] z-20 border-t border-border bg-background/95 backdrop-blur-sm">
                   <div className="px-4 py-2">
                     {/* Action buttons */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1">
                       <button
                         onClick={() => setSelectedAction(selectedAction === "export" ? null : "export")}
                         className={cn(
@@ -697,6 +737,28 @@ export function CarouselGenerator() {
                         <Maximize2 className="w-4 h-4" />
                         <span className="text-[10px]">Size</span>
                       </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleSaveCarousel}
+                          disabled={!carouselData}
+                          className="flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Save className="h-4 w-4" />
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSavedCarousels(loadCarousel())
+                            setIsLoadModalOpen(true)
+                          }}
+                          className="flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10"
+                        >
+                          <FolderOpen className="h-4 w-4" />
+                          Load
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1620,5 +1682,49 @@ export function CarouselGenerator() {
         </div>
       </div>
     </div>
+
+    {isLoadModalOpen && (
+      <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 px-4 py-6">
+        <div className="w-full max-w-xl overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold">Load saved carousel</p>
+              <p className="text-xs text-muted-foreground">Select a carousel saved in your browser.</p>
+            </div>
+            <button
+              onClick={() => setIsLoadModalOpen(false)}
+              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-white/5 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="max-h-[60vh] overflow-auto divide-y divide-border">
+            {savedCarousels.length === 0 ? (
+              <div className="p-4 text-sm text-muted-foreground">No saved carousels yet. Try saving your current work.</div>
+            ) : (
+              savedCarousels.map((entry) => (
+                <button
+                  key={entry.id}
+                  onClick={() => handleLoadCarouselSelection(entry)}
+                  className="w-full cursor-pointer px-4 py-3 text-left transition-colors hover:bg-white/5"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-white">{entry.data.topic}</p>
+                      <p className="text-xs text-muted-foreground">{entry.data.platform}</p>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      {new Date(entry.savedAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{entry.data.summary}</p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    )}
   )
 }
