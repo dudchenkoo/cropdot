@@ -162,10 +162,10 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
             {onAddSlide && currentSlide > 0 && (
               <button
                 onClick={() => onAddSlide(currentSlide - 1)}
-                className="flex-shrink-0 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-border flex items-center justify-center transition-all hover:scale-110 cursor-pointer z-10"
+                className="flex-shrink-0 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-border flex items-center justify-center transition-all hover:scale-110 cursor-pointer z-10"
                 title="Add slide"
               >
-                <Plus className="w-6 h-6 text-white" />
+                <Plus className="w-4 h-4 text-white" />
               </button>
             )}
 
@@ -183,10 +183,10 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
             {onAddSlide && (
               <button
                 onClick={() => onAddSlide(currentSlide)}
-                className="flex-shrink-0 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-border flex items-center justify-center transition-all hover:scale-110 cursor-pointer z-10"
+                className="flex-shrink-0 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-border flex items-center justify-center transition-all hover:scale-110 cursor-pointer z-10"
                 title="Add slide"
               >
-                <Plus className="w-6 h-6 text-white" />
+                <Plus className="w-4 h-4 text-white" />
               </button>
             )}
 
