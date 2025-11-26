@@ -6,6 +6,13 @@ import { useState } from "react"
 import type { CarouselData, Platform } from "@/lib/carousel-types"
 import { Loader2, Check } from "lucide-react"
 
+/**
+ * Props for the carousel generation form.
+ *
+ * @param onGenerate Callback invoked with the generated carousel payload.
+ * @param isLoading Current loading state, used to disable and show progress.
+ * @param setIsLoading Setter to toggle loading state during submission.
+ */
 interface CarouselFormProps {
   onGenerate: (data: CarouselData) => void
   isLoading: boolean
@@ -26,12 +33,34 @@ const tones: { value: string; label: string }[] = [
   { value: "storytelling", label: "Storytelling" },
 ]
 
+/**
+ * Collects user input for topic, platform, goal, and tone before requesting a
+ * generated carousel from the API. Local `useState` hooks track form fields and
+ * leverage `setIsLoading` to coordinate submission feedback with the parent
+ * component.
+ *
+ * @param onGenerate Callback invoked with parsed carousel data on success.
+ * @param isLoading Indicates whether a generation request is pending.
+ * @param setIsLoading Controls the loading state for the parent and this form.
+ *
+ * @example
+ * ```tsx
+ * <CarouselForm onGenerate={setCarousel} isLoading={loading} setIsLoading={setLoading} />
+ * ```
+ */
 export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFormProps) {
   const [topic, setTopic] = useState("")
   const [platform, setPlatform] = useState<Platform>("linkedin")
   const [goal, setGoal] = useState("")
   const [tone, setTone] = useState("professional")
 
+  /**
+   * Submits the generation request to `/api/generate`, gracefully handling
+   * JSON and streamed responses, surfacing errors, and toggling loading state
+   * for the parent component.
+   *
+   * @param e Form submission event.
+   */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!topic.trim()) return

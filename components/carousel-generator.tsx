@@ -17,10 +17,22 @@ const interTight = Inter_Tight({
   variable: "--font-inter-tight",
 })
 
+/**
+ * Generates a stable unique identifier for a layer instance.
+ *
+ * @returns Unique layer id string.
+ */
 function generateLayerId() {
   return `layer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 }
 
+/**
+ * Converts a slide's primitive content fields into a structured list of layers
+ * so the editing surface can treat all text types uniformly.
+ *
+ * @param slide Carousel slide to convert into editable layers.
+ * @returns Layer array representing the slide content.
+ */
 function slideToLayers(slide: CarouselData["slides"][0]): Layer[] {
   const layers: Layer[] = []
   if (slide.title || slide.hook) {
@@ -38,6 +50,14 @@ function slideToLayers(slide: CarouselData["slides"][0]): Layer[] {
 }
 
 // Helper function to generate pattern background for template previews
+/**
+ * Builds CSS gradients for previewing pattern overlays in template cards.
+ *
+ * @param pattern Pattern type used in the gradient.
+ * @param color Hex color applied to the pattern.
+ * @param opacity Pattern opacity from 0 to 1.
+ * @returns CSS gradient string for use in backgroundImage.
+ */
 function getPatternBackground(
   pattern: "dots" | "cells" | "lines" | "grid" | "diagonal" | "waves",
   color: string,
@@ -66,6 +86,20 @@ function getPatternBackground(
   }
 }
 
+/**
+ * Main orchestrator for the carousel generator experience.
+ *
+ * Maintains the generated carousel data, handles layer- and slide-level CRUD
+ * operations, and swaps between the dashboard and creation workflows. State is
+ * primarily managed through `useState` hooks, which track carousel data,
+ * selection, UI mode, and transient statuses. Interaction handlers update the
+ * canonical `carouselData` state and mirror changes into a saved carousel list.
+ *
+ * @example
+ * ```tsx
+ * <CarouselGenerator />
+ * ```
+ */
 export function CarouselGenerator() {
   const [carouselData, setCarouselData] = useState<CarouselData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -78,6 +112,12 @@ export function CarouselGenerator() {
   const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
 
+  /**
+   * Normalizes generated slides into editable structures and primes UI state
+   * for the creation view.
+   *
+   * @param data Carousel payload produced by the generator form.
+   */
   const handleGenerate = (data: CarouselData) => {
     const dataWithLayers = {
       ...data,
@@ -93,6 +133,12 @@ export function CarouselGenerator() {
     setViewMode("creation")
   }
 
+  /**
+   * Persists carousel edits locally and syncs the saved carousel list when
+   * editing an existing entry.
+   *
+   * @param updatedData Carousel object representing the latest edits.
+   */
   const updateCarouselData = (updatedData: CarouselData) => {
     setCarouselData(updatedData)
     // Also update savedCarousels if this carousel is in the list
@@ -107,6 +153,14 @@ export function CarouselGenerator() {
     })
   }
 
+  /**
+   * Updates the textual content of a layer and surfaces a transient save
+   * notification.
+   *
+   * @param slideIndex Index of the slide containing the target layer.
+   * @param layerId Identifier of the layer to update.
+   * @param content New text content for the layer.
+   */
   const handleLayerUpdate = (slideIndex: number, layerId: string, content: string) => {
     if (!carouselData) return
     const updatedSlides = carouselData.slides.map((slide, index) => {
@@ -124,6 +178,14 @@ export function CarouselGenerator() {
     setTimeout(() => setSavedStatus(null), 1500)
   }
 
+  /**
+   * Merges new style properties into a layer to drive typography and spacing
+   * controls.
+   *
+   * @param slideIndex Index of the slide containing the layer.
+   * @param layerId Identifier of the layer to update.
+   * @param style Partial style object to merge with existing layer style.
+   */
   const handleLayerStyleUpdate = (slideIndex: number, layerId: string, style: Partial<Layer["style"]>) => {
     if (!carouselData) return
     const updatedSlides = carouselData.slides.map((slide, index) => {
@@ -153,6 +215,13 @@ export function CarouselGenerator() {
     setTimeout(() => setSavedStatus(null), 1500)
   }
 
+  /**
+   * Applies background updates to a single slide or every slide in the current
+   * carousel.
+   *
+   * @param slideIndex Specific slide index or "all" to broadcast changes.
+   * @param background Partial background configuration to merge.
+   */
   const handleBackgroundUpdate = (slideIndex: number | "all", background: Partial<Slide["background"]>) => {
     if (!carouselData) return
     const slidesToUpdate = slideIndex === "all" ? carouselData.slides.map((_, i) => i) : [slideIndex]
@@ -179,6 +248,13 @@ export function CarouselGenerator() {
     setTimeout(() => setSavedStatus(null), 1500)
   }
 
+  /**
+   * Syncs size settings for a given slide or all slides to keep export
+   * dimensions consistent.
+   *
+   * @param slideIndex Slide index or "all" for bulk updates.
+   * @param size Size preset to apply.
+   */
   const handleSizeUpdate = (slideIndex: number | "all", size: Slide["size"]) => {
     if (!carouselData) return
     const slidesToUpdate = slideIndex === "all" ? carouselData.slides.map((_, i) => i) : [slideIndex]
@@ -198,6 +274,13 @@ export function CarouselGenerator() {
     setTimeout(() => setSavedStatus(null), 1500)
   }
 
+  /**
+   * Updates slide layout attributes like padding and alignment, optionally for
+   * every slide.
+   *
+   * @param slideIndex Slide index or "all" to propagate layout changes.
+   * @param layout Partial layout overrides to merge.
+   */
   const handleLayoutUpdate = (slideIndex: number | "all", layout: Partial<Slide["layout"]>) => {
     if (!carouselData) return
     const slidesToUpdate = slideIndex === "all" ? carouselData.slides.map((_, i) => i) : [slideIndex]
@@ -220,6 +303,13 @@ export function CarouselGenerator() {
     setTimeout(() => setSavedStatus(null), 1500)
   }
 
+  /**
+   * Toggles visibility on an individual layer, hiding it from the preview while
+   * keeping the content intact.
+   *
+   * @param slideIndex Index of the slide containing the layer.
+   * @param layerId Layer identifier being toggled.
+   */
   const handleLayerVisibility = (slideIndex: number, layerId: string) => {
     if (!carouselData) return
     const updatedSlides = carouselData.slides.map((slide, index) => {
@@ -236,6 +326,13 @@ export function CarouselGenerator() {
     if (selectedLayerId === layerId) setSelectedLayerId(null)
   }
 
+  /**
+   * Appends a new text layer of the specified type to a slide and focuses it
+   * for immediate editing.
+   *
+   * @param slideIndex Index of the slide receiving the new layer.
+   * @param type Layer type to append.
+   */
   const handleAddLayer = (slideIndex: number, type: Layer["type"]) => {
     if (!carouselData) return
     const newLayer: Layer = {
@@ -265,6 +362,12 @@ export function CarouselGenerator() {
     setSelectedLayerId(newLayer.id)
   }
 
+  /**
+   * Removes a layer from a slide and clears selection state if it was active.
+   *
+   * @param slideIndex Index of the slide containing the target layer.
+   * @param layerId Identifier of the layer to delete.
+   */
   const handleDeleteLayer = (slideIndex: number, layerId: string) => {
     if (!carouselData) return
     const updatedSlides = carouselData.slides.map((slide, index) => {
@@ -281,6 +384,12 @@ export function CarouselGenerator() {
     if (selectedLayerId === layerId) setSelectedLayerId(null)
   }
 
+  /**
+   * Inserts a new slide after the specified index and reindexes subsequent
+   * slides to keep ordering sequential.
+   *
+   * @param afterIndex Zero-based index after which to insert the slide.
+   */
   const handleAddSlide = (afterIndex: number) => {
     if (!carouselData) return
     const newSlide: CarouselData["slides"][0] = {
@@ -311,6 +420,12 @@ export function CarouselGenerator() {
     setSelectedLayerId(null)
   }
 
+  /**
+   * Deletes a slide and updates selection to the nearest available slide,
+   * preventing removal when only one slide exists.
+   *
+   * @param slideIndex Index of the slide to remove.
+   */
   const handleDeleteSlide = (slideIndex: number) => {
     if (!carouselData || carouselData.slides.length <= 1) return
     
@@ -338,6 +453,13 @@ export function CarouselGenerator() {
     setSelectedLayerId(null)
   }
 
+  /**
+   * Moves a slide to a new position, reindexes the sequence, and maintains the
+   * current selection when possible.
+   *
+   * @param fromIndex Original slide position.
+   * @param toIndex Desired slide position.
+   */
   const handleReorderSlides = (fromIndex: number, toIndex: number) => {
     if (!carouselData) return
     
@@ -367,16 +489,34 @@ export function CarouselGenerator() {
     setSelectedLayerId(null)
   }
 
+  /**
+   * Initializes a drag gesture for layer reordering.
+   *
+   * @param e Drag event from the draggable layer handle.
+   * @param layerId Identifier for the layer being dragged.
+   */
   const handleDragStart = (e: React.DragEvent, layerId: string) => {
     setDraggedLayerId(layerId)
     e.dataTransfer.effectAllowed = "move"
   }
 
+  /**
+   * Enables drop targets during layer drag interactions.
+   *
+   * @param e Drag over event for a layer row.
+   */
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = "move"
   }
 
+  /**
+   * Reorders layers within the selected slide when a dragged layer is dropped
+   * on another layer.
+   *
+   * @param e Drop event fired on the target layer.
+   * @param targetLayerId Identifier of the layer receiving the drop.
+   */
   const handleDrop = (e: React.DragEvent, targetLayerId: string) => {
     e.preventDefault()
     if (!carouselData || !draggedLayerId || draggedLayerId === targetLayerId) {
