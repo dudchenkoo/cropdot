@@ -6,6 +6,8 @@ import { SlideCard } from "./slide-card"
 import { Button } from "@/components/ui/button"
 import { Layers, Square, Grid3x3, Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Kbd } from "@/components/ui/kbd"
 
 interface CarouselPreviewProps {
   data: CarouselData | null
@@ -156,14 +158,24 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
             
             {/* Pagination controls pinned under slide */}
             <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
-                disabled={currentSlide === 0}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
+                    disabled={currentSlide === 0}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs">Previous slide</span>
+                    <Kbd>←</Kbd>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
 
               <div className="flex items-center gap-2">
                 {slides.map((_, i) => (
@@ -178,14 +190,24 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
                 ))}
               </div>
 
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
-                disabled={currentSlide === slides.length - 1}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
+                    disabled={currentSlide === slides.length - 1}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs">Next slide</span>
+                    <Kbd>→</Kbd>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
 import { Inter_Tight } from "next/font/google"
-import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FilePlus, Keyboard } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { templates, type Template } from "@/lib/templates"
 import {
@@ -35,8 +35,11 @@ import { CarouselPreview } from "./carousel-preview"
 import { Header } from "./header"
 import { ErrorBoundary } from "./error-boundary"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { generateLayerId, getPatternBackground, slideToLayers } from "@/lib/helpers"
+import { registerKeyboardShortcuts, type ShortcutConfig } from "@/lib/keyboard"
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -70,6 +73,15 @@ export function CarouselGenerator(): JSX.Element {
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
   const actionPanelRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
+
+  const shortcutDefinitions = [
+    { label: "Save carousel", keys: ["Cmd/Ctrl", "S"] },
+    { label: "New carousel", keys: ["Cmd/Ctrl", "N"] },
+    { label: "Delete slide", keys: ["Delete", "Backspace"] },
+    { label: "Previous slide", keys: ["←"] },
+    { label: "Next slide", keys: ["→"] },
+  ]
 
 <<<<<<< HEAD
   const handleGenerate = (data: CarouselData): void => {
@@ -114,8 +126,8 @@ export function CarouselGenerator(): JSX.Element {
       previousFocusRef.current?.focus()
     }
   }, [selectedAction])
-  const handleGenerate = (data: CarouselData) => {
->>>>>>> origin/codex/add-accessibility-features-to-carousel-components
+
+  const handleGenerate = (data: CarouselData): void => {
     const dataWithLayers = {
       ...data,
       slides: data.slides.map((slide) => ({
@@ -129,6 +141,183 @@ export function CarouselGenerator(): JSX.Element {
     setSelectedLayerId(null)
     setViewMode("creation")
   }
+
+<<<<<<< HEAD
+  const updateCarouselData = (updatedData: CarouselData): void => {
+=======
+  const handleSelectSlide = (index: number) => {
+    setSelectedSlideIndex(index)
+    setSelectedLayerId(null)
+  }
+
+  const handleSaveCarousel = () => {
+    if (!carouselData) return
+
+    setSavedCarousels((prev) => {
+      const existingIndex = prev.findIndex(
+        (c) => c.topic === carouselData.topic && c.platform === carouselData.platform,
+      )
+
+      if (existingIndex === -1) {
+        return [...prev, carouselData]
+      }
+
+      const updated = [...prev]
+      updated[existingIndex] = carouselData
+      return updated
+    })
+
+    setSavedStatus("Carousel saved")
+    setTimeout(() => setSavedStatus(null), 1500)
+  }
+
+  const handleNewCarousel = () => {
+    setCarouselData(null)
+    setSelectedSlideIndex(0)
+    setSelectedLayerId(null)
+    setSelectedAction(null)
+    setViewMode("creation")
+  }
+
+  const handleNavigateSlide = (direction: "next" | "previous") => {
+    if (!carouselData || viewMode !== "creation") return
+
+    const totalSlides = carouselData.slides.length
+    const newIndex =
+      direction === "next"
+        ? Math.min(totalSlides - 1, selectedSlideIndex + 1)
+        : Math.max(0, selectedSlideIndex - 1)
+
+    if (newIndex !== selectedSlideIndex) {
+      setSelectedSlideIndex(newIndex)
+      setSelectedLayerId(null)
+    }
+  }
+
+  const handleDeleteCurrentSlide = () => {
+    if (!carouselData || viewMode !== "creation") return
+    handleDeleteSlide(selectedSlideIndex)
+  }
+
+  useEffect(() => {
+    const shortcuts: ShortcutConfig[] = [
+      {
+        key: "s",
+        metaOrCtrl: true,
+        allowInInputs: true,
+        handler: () => handleSaveCarousel(),
+      },
+      {
+        key: "n",
+        metaOrCtrl: true,
+        allowInInputs: true,
+        handler: () => handleNewCarousel(),
+      },
+      {
+        key: "delete",
+        handler: () => handleDeleteCurrentSlide(),
+      },
+      {
+        key: "backspace",
+        handler: () => handleDeleteCurrentSlide(),
+      },
+      {
+        key: "arrowleft",
+        handler: () => handleNavigateSlide("previous"),
+      },
+      {
+        key: "arrowright",
+        handler: () => handleNavigateSlide("next"),
+      },
+    ]
+
+    const unregister = registerKeyboardShortcuts(shortcuts)
+    return unregister
+  }, [
+    carouselData,
+    handleDeleteCurrentSlide,
+    handleNavigateSlide,
+    handleNewCarousel,
+    handleSaveCarousel,
+    selectedSlideIndex,
+    viewMode,
+  ])
+
+  const handleSaveCarousel = () => {
+    // TODO: Implement save functionality
+    if (carouselData) {
+      setSavedStatus("Carousel saved")
+      setTimeout(() => setSavedStatus(null), 1500)
+    }
+  }
+
+  const handleNewCarousel = () => {
+    setViewMode("dashboard")
+    setCarouselData(null)
+    setSelectedSlideIndex(0)
+    setSelectedLayerId(null)
+  }
+
+  const handleDeleteCurrentSlide = () => {
+    if (carouselData && carouselData.slides.length > 1) {
+      handleDeleteSlide(selectedSlideIndex)
+    }
+  }
+
+  const handleNavigateSlide = (direction: "previous" | "next") => {
+    if (!carouselData) return
+    if (direction === "previous" && selectedSlideIndex > 0) {
+      setSelectedSlideIndex(selectedSlideIndex - 1)
+    } else if (direction === "next" && selectedSlideIndex < carouselData.slides.length - 1) {
+      setSelectedSlideIndex(selectedSlideIndex + 1)
+    }
+  }
+
+  useEffect(() => {
+    if (viewMode !== "creation" || !carouselData) return
+
+    const shortcuts: ShortcutConfig[] = [
+      {
+        key: "s",
+        metaOrCtrl: true,
+        allowInInputs: true,
+        handler: () => handleSaveCarousel(),
+      },
+      {
+        key: "n",
+        metaOrCtrl: true,
+        allowInInputs: true,
+        handler: () => handleNewCarousel(),
+      },
+      {
+        key: "delete",
+        handler: () => handleDeleteCurrentSlide(),
+      },
+      {
+        key: "backspace",
+        handler: () => handleDeleteCurrentSlide(),
+      },
+      {
+        key: "arrowleft",
+        handler: () => handleNavigateSlide("previous"),
+      },
+      {
+        key: "arrowright",
+        handler: () => handleNavigateSlide("next"),
+      },
+    ]
+
+    const unregister = registerKeyboardShortcuts(shortcuts)
+    return unregister
+  }, [
+    carouselData,
+    handleDeleteCurrentSlide,
+    handleNavigateSlide,
+    handleNewCarousel,
+    handleSaveCarousel,
+    selectedSlideIndex,
+    viewMode,
+  ])
 
   const updateCarouselData = (updatedData: CarouselData): void => {
     setCarouselData(updatedData)
@@ -644,6 +833,7 @@ export function CarouselGenerator(): JSX.Element {
                 }}
               />
 
+<<<<<<< HEAD
               {carouselData ? (
                 <>
                   <div className="relative z-10 flex items-center justify-center min-h-full pb-24">
@@ -662,11 +852,27 @@ export function CarouselGenerator(): JSX.Element {
                       />
                     </ErrorBoundary>
                   </div>
+=======
+            {carouselData ? (
+              <>
+                <div className="relative z-10 flex items-center justify-center min-h-full pb-24">
+                  <CarouselPreview
+                    data={carouselData}
+                    isLoading={isLoading}
+                    currentSlide={selectedSlideIndex}
+                    onSlideChange={handleSelectSlide}
+                    onAddSlide={handleAddSlide}
+                    onDeleteSlide={handleDeleteSlide}
+                    onReorderSlides={handleReorderSlides}
+                  />
+                </div>
+>>>>>>> origin/codex/add-keyboard-shortcuts-for-carousel-generator
                 
                 {/* Fixed Bottom Action Panel */}
                 <div className="fixed bottom-0 left-0 right-[380px] z-20 border-t border-border bg-background/95 backdrop-blur-sm">
                   <div className="px-4 py-2">
                     {/* Action buttons */}
+<<<<<<< HEAD
                     <div className="flex items-center gap-1">
                       <button
                         aria-label="Toggle export options"
@@ -753,6 +959,154 @@ export function CarouselGenerator(): JSX.Element {
                         <Maximize2 className="w-4 h-4" />
                         <span className="text-[10px]">Size</span>
                       </button>
+=======
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setSelectedAction(selectedAction === "export" ? null : "export")}
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
+                            selectedAction === "export"
+                              ? "bg-accent/20 text-accent"
+                              : "text-muted-foreground hover:text-white hover:bg-white/5",
+                          )}
+                        >
+                          <Upload className="w-4 h-4" />
+                          <span className="text-[10px]">Export</span>
+                        </button>
+                        <button
+                          onClick={() => setSelectedAction(selectedAction === "template" ? null : "template")}
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
+                            selectedAction === "template"
+                              ? "bg-accent/20 text-accent"
+                              : "text-muted-foreground hover:text-white hover:bg-white/5",
+                          )}
+                        >
+                          <Grid3x3 className="w-4 h-4" />
+                          <span className="text-[10px]">Template</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedAction("background")
+                          }}
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
+                            selectedAction === "background"
+                              ? "bg-accent/20 text-accent"
+                              : "text-muted-foreground hover:text-white hover:bg-white/5",
+                          )}
+                        >
+                          <PaintBucket className="w-4 h-4" />
+                          <span className="text-[10px]">Background</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (selectedLayer) {
+                              setSelectedAction("text")
+                            }
+                          }}
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
+                            selectedAction === "text" && selectedLayer
+                              ? "bg-accent/20 text-accent"
+                              : "text-muted-foreground hover:text-white hover:bg-white/5",
+                          )}
+                          disabled={!selectedLayer}
+                        >
+                          <Type className="w-4 h-4" />
+                          <span className="text-[10px]">Text</span>
+                        </button>
+                        <button
+                          onClick={() => setSelectedAction(selectedAction === "layout" ? null : "layout")}
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
+                            selectedAction === "layout"
+                              ? "bg-accent/20 text-accent"
+                              : "text-muted-foreground hover:text-white hover:bg-white/5",
+                          )}
+                        >
+                          <Layout className="w-4 h-4" />
+                          <span className="text-[10px]">Layout</span>
+                        </button>
+                        <button
+                          onClick={() => setSelectedAction(selectedAction === "size" ? null : "size")}
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
+                            selectedAction === "size"
+                              ? "bg-accent/20 text-accent"
+                              : "text-muted-foreground hover:text-white hover:bg-white/5",
+                          )}
+                        >
+                          <Maximize2 className="w-4 h-4" />
+                          <span className="text-[10px]">Size</span>
+                        </button>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        {savedStatus && (
+                          <span className="flex items-center gap-1.5 text-xs text-green-400">
+                            <Check className="w-3 h-3" />
+                            {savedStatus}
+                          </span>
+                        )}
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveCarousel}>
+                              <Save className="w-4 h-4" />
+                              Save
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs">Save carousel</span>
+                              <KbdGroup>
+                                <Kbd>Cmd/Ctrl</Kbd>
+                                <Kbd>S</Kbd>
+                              </KbdGroup>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" className="gap-2" onClick={handleNewCarousel}>
+                              <FilePlus className="w-4 h-4" />
+                              New
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs">Start a new carousel</span>
+                              <KbdGroup>
+                                <Kbd>Cmd/Ctrl</Kbd>
+                                <Kbd>N</Kbd>
+                              </KbdGroup>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setIsShortcutsOpen(true)}
+                              aria-label="Keyboard shortcuts"
+                            >
+                              <Keyboard className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs">Keyboard shortcuts</span>
+                              <Kbd>?</Kbd>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+>>>>>>> origin/codex/add-keyboard-shortcuts-for-carousel-generator
                     </div>
                   </div>
                 </div>
@@ -1769,6 +2123,28 @@ export function CarouselGenerator(): JSX.Element {
             )}
           </aside>
         </div>
+        
+        <Dialog open={isShortcutsOpen} onOpenChange={setIsShortcutsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Keyboard shortcuts</DialogTitle>
+              <DialogDescription>Work faster with these quick keys.</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 pt-2">
+              {shortcutDefinitions.map((shortcut) => (
+                <div key={shortcut.label} className="flex items-center justify-between gap-4">
+                  <span className="text-sm text-muted-foreground">{shortcut.label}</span>
+                  <KbdGroup>
+                    {shortcut.keys.map((key, index) => (
+                      <Kbd key={`${shortcut.label}-${key}-${index}`}>{key}</Kbd>
+                    ))}
+                  </KbdGroup>
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
     </ErrorBoundary>
