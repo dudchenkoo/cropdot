@@ -31,11 +31,16 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
   const [platform, setPlatform] = useState<Platform>("linkedin")
   const [goal, setGoal] = useState("")
   const [tone, setTone] = useState("professional")
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!topic.trim()) return
+    if (!topic.trim()) {
+      setErrorMessage("Please enter a topic so we can generate your carousel.")
+      return
+    }
 
+    setErrorMessage(null)
     setIsLoading(true)
 
     try {
@@ -51,31 +56,37 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           status: response.status,
           statusText: response.statusText,
           body: errorText,
+          topic,
+          platform,
         })
-        let errorMessage = `Failed to generate carousel: ${response.status} ${response.statusText}`
+        let friendlyMessage = "We couldn't generate your carousel right now. Please try again in a moment."
         try {
           const errorJson = JSON.parse(errorText)
-          errorMessage = errorJson.error || errorMessage
+          friendlyMessage = errorJson.error || friendlyMessage
         } catch {
-          // If not JSON, use the text as is
-          if (errorText) errorMessage = errorText
+          if (errorText) friendlyMessage = errorText
         }
-        throw new Error(errorMessage)
+        setErrorMessage(friendlyMessage)
+        return
       }
 
-      // Handle JSON response (mock data or non-streaming API)
       const contentType = response.headers.get("content-type")
       if (contentType?.includes("application/json")) {
         const data = await response.json() as CarouselData
+        if (!data || !Array.isArray(data.slides) || data.slides.length === 0) {
+          console.error("Empty carousel payload from API", { data })
+          setErrorMessage("We couldn't build slides from that request. Please try again with a bit more detail.")
+          return
+        }
         onGenerate(data)
       } else {
-        // Handle streaming response (for future AI integration)
         const reader = response.body?.getReader()
         const decoder = new TextDecoder()
         let fullText = ""
 
         if (!reader) {
-          throw new Error("Response body is not readable")
+          setErrorMessage("We received an unexpected response from the server. Please try again.")
+          return
         }
 
         while (true) {
@@ -92,20 +103,28 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         if (jsonMatch) {
           try {
             const data = JSON.parse(jsonMatch[0]) as CarouselData
+            if (!data || !Array.isArray(data.slides) || data.slides.length === 0) {
+              console.error("Streaming response did not include slides", { data })
+              setErrorMessage("We couldn't create slides from the response. Please try again.")
+              return
+            }
             onGenerate(data)
           } catch (parseError) {
-            console.error("JSON Parse Error:", parseError)
-            console.error("Received text:", fullText)
-            throw new Error("Failed to parse carousel data. Check console for details.")
+            console.error("JSON Parse Error:", { error: parseError, fullText })
+            setErrorMessage("We couldn't read the carousel response. Please try again.")
           }
         } else {
           console.error("No JSON found in response. Full text:", fullText)
-          throw new Error(`No valid JSON response from API. Received: ${fullText.substring(0, 100)}...`)
+          setErrorMessage("We couldn't parse the response from the server. Please try again in a moment.")
         }
       }
     } catch (error) {
-      console.error("Error generating carousel:", error)
-      alert(error instanceof Error ? error.message : "Failed to generate carousel. Please check the console for details.")
+      console.error("Error generating carousel:", { error, topic, platform, goal, tone })
+      const fallbackMessage =
+        error instanceof Error
+          ? error.message
+          : "We couldn't generate your carousel right now. Please check your connection and try again."
+      setErrorMessage(fallbackMessage)
     } finally {
       setIsLoading(false)
     }
@@ -200,6 +219,12 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           })}
         </div>
       </div>
+
+      {errorMessage ? (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {errorMessage}
+        </div>
+      ) : null}
 
       <button
         type="submit"
