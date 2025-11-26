@@ -161,7 +161,7 @@ function generateMockCarousel(topic: string, platform: string) {
  * {
  *   "topic": "AI prompts",
  *   "platform": "linkedin",
- *   "slides": [ /* array of slide objects */ ],
+ *   "slides": [ /* array of slide objects */ ],,
  *   "summary": "High-level recap for carousel readers."
  * }
  *

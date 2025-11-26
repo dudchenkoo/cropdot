@@ -1,10 +1,9 @@
 "use client"
 
 import type React from "react"
-<<<<<<< HEAD
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Inter_Tight } from "next/font/google"
-import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FilePlus, Keyboard, Undo2, Redo2 } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FilePlus, Keyboard, Undo2, Redo2, FolderOpen, X } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { templates, type Template } from "@/lib/templates"
 import {
@@ -31,14 +30,7 @@ import {
   SIZE_OPTIONS,
 } from "@/lib/constants"
 import { generateLayerId, slideToLayers, getPatternBackground } from "@/lib/helpers"
-=======
-import { useEffect, useState } from "react"
-import { Inter_Tight } from "next/font/google"
-import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FolderOpen, X } from "lucide-react"
-import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
-import { templates, type Template } from "@/lib/templates"
 import { loadCarousel, saveCarousel, type StoredCarousel } from "@/lib/storage"
->>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
 import { CarouselForm } from "./carousel-form"
 import { CarouselPreview } from "./carousel-preview"
 import { Header } from "./header"
@@ -48,20 +40,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-<<<<<<< HEAD
 import { registerKeyboardShortcuts, type ShortcutConfig } from "@/lib/keyboard"
 import { toast } from "@/hooks/use-toast"
 import { canRedo, canUndo, createHistory, pushState, redo as redoHistory, undo as undoHistory, type HistoryState } from "@/lib/history"
-=======
-import { toast } from "@/hooks/use-toast"
->>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
   variable: "--font-inter-tight",
 })
 
-<<<<<<< HEAD
 /**
  * Main orchestrator for the carousel generator experience.
  *
@@ -88,12 +75,11 @@ export function CarouselGenerator(): JSX.Element {
   const [savedStatus, setSavedStatus] = useState<string | null>(null)
   const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
-<<<<<<< HEAD
   const actionPanelRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
+  const [isLoadModalOpen, setIsLoadModalOpen] = useState(false)
 
-<<<<<<< HEAD
   const shortcutDefinitions = [
     { label: "Save carousel", keys: ["Cmd/Ctrl", "S"] },
     { label: "New carousel", keys: ["Cmd/Ctrl", "N"] },
@@ -101,6 +87,22 @@ export function CarouselGenerator(): JSX.Element {
     { label: "Previous slide", keys: ["←"] },
     { label: "Next slide", keys: ["→"] },
   ]
+
+  const commitCarouselChange = useCallback(
+    (updatedData: CarouselData, statusMessage?: string) => {
+      setHistory((current) => pushState(current, updatedData))
+
+      if (statusMessage) {
+        setSavedStatus(statusMessage)
+        setTimeout(() => setSavedStatus(null), 1500)
+      }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    setSavedCarousels(loadCarousel())
+  }, [])
 
   useEffect(() => {
     if (!selectedAction) return
@@ -144,28 +146,6 @@ export function CarouselGenerator(): JSX.Element {
   }, [selectedAction])
 
   const handleGenerate = (data: CarouselData): void => {
-=======
-  const commitCarouselChange = useCallback(
-    (updatedData: CarouselData, statusMessage?: string) => {
-      setHistory((current) => pushState(current, updatedData))
-
-      if (statusMessage) {
-        setSavedStatus(statusMessage)
-        setTimeout(() => setSavedStatus(null), 1500)
-      }
-    },
-    [],
-  )
-=======
-  const [isLoadModalOpen, setIsLoadModalOpen] = useState(false)
-
-  useEffect(() => {
-    setSavedCarousels(loadCarousel())
-  }, [])
->>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
-
-  const handleGenerate = (data: CarouselData) => {
->>>>>>> origin/codex/add-undo/redo-functionality-to-carousel-generator
     const dataWithLayers = {
       ...data,
       slides: data.slides.map((slide) => ({
@@ -173,31 +153,18 @@ export function CarouselGenerator(): JSX.Element {
         layers: slide.layers?.length ? slide.layers : slideToLayers(slide),
       })),
     }
-<<<<<<< HEAD
 
-    setHistory(createHistory(dataWithLayers, 50))
-    setSavedCarousels((prev) => {
-      const index = prev.findIndex((c) => c.topic === dataWithLayers.topic && c.platform === dataWithLayers.platform)
-      if (index !== -1) {
-        const updated = [...prev]
-        updated[index] = dataWithLayers
-        return updated
-      }
-      return [...prev, dataWithLayers]
-    })
-=======
     setHistory(createHistory(dataWithLayers, 50))
     setSelectedSlideIndex(0)
     setSelectedLayerId(null)
     setViewMode("creation")
   }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   const handleSelectSlide = (index: number): void => {
     setSelectedSlideIndex(index)
     setSelectedLayerId(null)
-=======
+  }
+
   const handleSaveCarousel = (): void => {
     if (!carouselData) return
 
@@ -229,27 +196,6 @@ export function CarouselGenerator(): JSX.Element {
       title: "Carousel loaded",
       description: `Loaded ${entry.data.topic}`,
     })
-  }
-
-  const handleSaveCarousel = (): void => {
-    if (!carouselData) return
-
-    setSavedCarousels((prev) => {
-      const existingIndex = prev.findIndex(
-        (c) => c.topic === carouselData.topic && c.platform === carouselData.platform,
-      )
-
-      if (existingIndex === -1) {
-        return [...prev, carouselData]
-      }
-
-      const updated = [...prev]
-      updated[existingIndex] = carouselData
-      return updated
-    })
-
-    setSavedStatus("Carousel saved")
-    setTimeout(() => setSavedStatus(null), 1500)
   }
 
   const handleNewCarousel = (): void => {
@@ -827,21 +773,10 @@ export function CarouselGenerator(): JSX.Element {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {savedCarousels.map((carousel) => (
                         <button
-<<<<<<< HEAD
-                          aria-label={`Open carousel ${carousel.topic}`}
-                          key={index}
-                          onClick={() => {
-                            setHistory(createHistory(carousel, 50))
-                            setSelectedSlideIndex(0)
-                            setSelectedLayerId(null)
-=======
+                          aria-label={`Open carousel ${carousel.data.topic}`}
                           key={carousel.id}
                           onClick={() => {
-                            setCarouselData(carousel.data)
->>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
-                            setViewMode("creation")
-                            setSelectedSlideIndex(0)
-                            setSelectedLayerId(null)
+                            handleLoadCarouselSelection(carousel)
                           }}
                           className="p-4 rounded-lg border border-border bg-background hover:border-white/20 hover:bg-white/5 transition-colors cursor-pointer text-left"
                         >
@@ -890,7 +825,6 @@ export function CarouselGenerator(): JSX.Element {
                 }}
               />
 
-<<<<<<< HEAD
               {carouselData ? (
                 <>
                   <div className="relative z-10 flex items-center justify-center min-h-full pb-24">
@@ -915,13 +849,8 @@ export function CarouselGenerator(): JSX.Element {
                 <div className="fixed bottom-0 left-0 right-[380px] z-20 border-t border-border bg-background/95 backdrop-blur-sm">
                   <div className="px-4 py-2">
                     {/* Action buttons */}
-<<<<<<< HEAD
-<<<<<<< HEAD
-                    <div className="flex items-center gap-1">
-=======
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1">
->>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
                       <button
                         aria-label="Toggle export options"
                         onClick={() => setSelectedAction(selectedAction === "export" ? null : "export")}
@@ -1007,11 +936,6 @@ export function CarouselGenerator(): JSX.Element {
                         <Maximize2 className="w-4 h-4" />
                         <span className="text-[10px]">Size</span>
                       </button>
-<<<<<<< HEAD
-=======
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-1">
-                        <button
                           onClick={() => setSelectedAction(selectedAction === "export" ? null : "export")}
                           className={cn(
                             "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
@@ -1155,9 +1079,6 @@ export function CarouselGenerator(): JSX.Element {
                           </TooltipContent>
                         </Tooltip>
                       </div>
->>>>>>> origin/codex/add-keyboard-shortcuts-for-carousel-generator
-=======
-                      </div>
 
                       <div className="flex items-center gap-2">
                         <button
@@ -1179,7 +1100,6 @@ export function CarouselGenerator(): JSX.Element {
                           Load
                         </button>
                       </div>
->>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
                     </div>
                   </div>
                 </div>
@@ -1277,19 +1197,16 @@ export function CarouselGenerator(): JSX.Element {
                        selectedAction === "size" ? "Size" :
                        "Edit slide"}
                     </span>
-=======
-                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      {selectedAction && (
-                        <button
-                          onClick={() => {
-                            setSelectedAction(null)
-                          }}
-                          className="p-1 rounded hover:bg-white/10 transition-colors"
-                        >
-                          <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-                        </button>
-                      )}
+                    {selectedAction && (
+                      <button
+                        onClick={() => {
+                          setSelectedAction(null)
+                        }}
+                        className="p-1 rounded hover:bg-white/10 transition-colors"
+                      >
+                        <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    )}
                       <span className="text-sm font-medium">
                         {selectedAction === "text" ? "Text Styling" :
                          selectedAction === "background" ? "Background Settings" :
@@ -2233,9 +2150,6 @@ export function CarouselGenerator(): JSX.Element {
         </Dialog>
       </div>
     </div>
-<<<<<<< HEAD
-    </ErrorBoundary>
-=======
 
     {isLoadModalOpen && (
       <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 px-4 py-6">
