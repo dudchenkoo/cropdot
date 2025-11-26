@@ -12,18 +12,64 @@ import {
 } from "@/lib/constants"
 import { Loader2, Check } from "lucide-react"
 
+/**
+ * Props for the carousel generation form.
+ *
+ * @param onGenerate Callback invoked with the generated carousel payload.
+ * @param isLoading Current loading state, used to disable and show progress.
+ * @param setIsLoading Setter to toggle loading state during submission.
+ */
 interface CarouselFormProps {
   onGenerate: (data: CarouselData) => void
   isLoading: boolean
   setIsLoading: (loading: boolean) => void
 }
 
+<<<<<<< HEAD
+=======
+const platforms: { value: Platform; label: string; color: string }[] = [
+  { value: "linkedin", label: "LinkedIn", color: "#0077B5" },
+  { value: "instagram", label: "Instagram", color: "#E4405F" },
+  { value: "telegram", label: "Telegram", color: "#0088cc" },
+  { value: "threads", label: "Threads", color: "#000000" },
+]
+
+const tones: { value: string; label: string }[] = [
+  { value: "professional", label: "Professional" },
+  { value: "friendly", label: "Friendly" },
+  { value: "bold", label: "Bold" },
+  { value: "storytelling", label: "Storytelling" },
+]
+
+/**
+ * Collects user input for topic, platform, goal, and tone before requesting a
+ * generated carousel from the API. Local `useState` hooks track form fields and
+ * leverage `setIsLoading` to coordinate submission feedback with the parent
+ * component.
+ *
+ * @param onGenerate Callback invoked with parsed carousel data on success.
+ * @param isLoading Indicates whether a generation request is pending.
+ * @param setIsLoading Controls the loading state for the parent and this form.
+ *
+ * @example
+ * ```tsx
+ * <CarouselForm onGenerate={setCarousel} isLoading={loading} setIsLoading={setLoading} />
+ * ```
+ */
+>>>>>>> origin/codex/add-jsdoc-documentation-to-core-components
 export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFormProps) {
   const [topic, setTopic] = useState("")
   const [platform, setPlatform] = useState<Platform>(DEFAULT_PLATFORM)
   const [goal, setGoal] = useState("")
   const [tone, setTone] = useState(DEFAULT_TONE)
 
+  /**
+   * Submits the generation request to `/api/generate`, gracefully handling
+   * JSON and streamed responses, surfacing errors, and toggling loading state
+   * for the parent component.
+   *
+   * @param e Form submission event.
+   */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!topic.trim()) return

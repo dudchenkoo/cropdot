@@ -42,6 +42,20 @@ const interTight = Inter_Tight({
   variable: "--font-inter-tight",
 })
 
+/**
+ * Main orchestrator for the carousel generator experience.
+ *
+ * Maintains the generated carousel data, handles layer- and slide-level CRUD
+ * operations, and swaps between the dashboard and creation workflows. State is
+ * primarily managed through `useState` hooks, which track carousel data,
+ * selection, UI mode, and transient statuses. Interaction handlers update the
+ * canonical `carouselData` state and mirror changes into a saved carousel list.
+ *
+ * @example
+ * ```tsx
+ * <CarouselGenerator />
+ * ```
+ */
 export function CarouselGenerator() {
   const [carouselData, setCarouselData] = useState<CarouselData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
