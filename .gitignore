@@ -39,3 +39,16 @@ next-env.d.ts
 *.swp
 *.swo
 
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Lock files (keep one, ignore others)
+pnpm-lock.yaml
+yarn.lock
+
