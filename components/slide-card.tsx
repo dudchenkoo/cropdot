@@ -217,21 +217,20 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
         )}
       </div>
 
-      {/* Footer */}
-      {footer?.enabled && footer.text ? (
+      {/* Footer - only show if enabled */}
+      {footer?.enabled === true && footer.text ? (
         <div className="mt-4 pt-3 border-t border-white/10 text-xs text-muted-foreground">
           {footer.text}
         </div>
-      ) : (
-        !compact && (
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-            <span className="text-xs text-muted-foreground uppercase tracking-wider">{slide.type}</span>
-            <span className="text-xs text-muted-foreground">
-              {index + 1}/{total}
-            </span>
-          </div>
-        )
-      )}
+      ) : !footer && !compact ? (
+        // Show default slide info only if footer doesn't exist at all
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">{slide.type}</span>
+          <span className="text-xs text-muted-foreground">
+            {index + 1}/{total}
+          </span>
+        </div>
+      ) : null}
     </div>
   )
 }
