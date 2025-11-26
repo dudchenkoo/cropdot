@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+<<<<<<< HEAD
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Inter_Tight } from "next/font/google"
 import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FilePlus, Keyboard, Undo2, Redo2 } from "lucide-react"
@@ -30,6 +31,14 @@ import {
   SIZE_OPTIONS,
 } from "@/lib/constants"
 import { generateLayerId, slideToLayers, getPatternBackground } from "@/lib/helpers"
+=======
+import { useEffect, useState } from "react"
+import { Inter_Tight } from "next/font/google"
+import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FolderOpen, X } from "lucide-react"
+import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
+import { templates, type Template } from "@/lib/templates"
+import { loadCarousel, saveCarousel, type StoredCarousel } from "@/lib/storage"
+>>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
 import { CarouselForm } from "./carousel-form"
 import { CarouselPreview } from "./carousel-preview"
 import { Header } from "./header"
@@ -39,9 +48,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+<<<<<<< HEAD
 import { registerKeyboardShortcuts, type ShortcutConfig } from "@/lib/keyboard"
 import { toast } from "@/hooks/use-toast"
 import { canRedo, canUndo, createHistory, pushState, redo as redoHistory, undo as undoHistory, type HistoryState } from "@/lib/history"
+=======
+import { toast } from "@/hooks/use-toast"
+>>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -68,13 +81,14 @@ export function CarouselGenerator(): JSX.Element {
   const carouselData = history.present
   const [isLoading, setIsLoading] = useState(false)
   const [viewMode, setViewMode] = useState<"dashboard" | "creation">("dashboard")
-  const [savedCarousels, setSavedCarousels] = useState<CarouselData[]>([])
+  const [savedCarousels, setSavedCarousels] = useState<StoredCarousel[]>([])
   const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0)
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
   const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null)
   const [savedStatus, setSavedStatus] = useState<string | null>(null)
   const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
+<<<<<<< HEAD
   const actionPanelRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
@@ -142,6 +156,13 @@ export function CarouselGenerator(): JSX.Element {
     },
     [],
   )
+=======
+  const [isLoadModalOpen, setIsLoadModalOpen] = useState(false)
+
+  useEffect(() => {
+    setSavedCarousels(loadCarousel())
+  }, [])
+>>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
 
   const handleGenerate = (data: CarouselData) => {
 >>>>>>> origin/codex/add-undo/redo-functionality-to-carousel-generator
@@ -152,6 +173,7 @@ export function CarouselGenerator(): JSX.Element {
         layers: slide.layers?.length ? slide.layers : slideToLayers(slide),
       })),
     }
+<<<<<<< HEAD
 
     setHistory(createHistory(dataWithLayers, 50))
     setSavedCarousels((prev) => {
@@ -163,15 +185,50 @@ export function CarouselGenerator(): JSX.Element {
       }
       return [...prev, dataWithLayers]
     })
+=======
+    setHistory(createHistory(dataWithLayers, 50))
     setSelectedSlideIndex(0)
     setSelectedLayerId(null)
     setViewMode("creation")
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   const handleSelectSlide = (index: number): void => {
     setSelectedSlideIndex(index)
     setSelectedLayerId(null)
+=======
+  const handleSaveCarousel = (): void => {
+    if (!carouselData) return
+
+    try {
+      const savedEntry = saveCarousel(carouselData)
+      setSavedCarousels((prev) => [savedEntry, ...prev])
+      toast({
+        title: "Carousel saved",
+        description: "Your carousel was stored in the browser.",
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save carousel."
+      toast({
+        title: "Save failed",
+        description: message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleLoadCarouselSelection = (entry: StoredCarousel): void => {
+    setHistory(createHistory(entry.data, 50))
+    setSelectedSlideIndex(0)
+    setSelectedLayerId(null)
+    setViewMode("creation")
+    setIsLoadModalOpen(false)
+
+    toast({
+      title: "Carousel loaded",
+      description: `Loaded ${entry.data.topic}`,
+    })
   }
 
   const handleSaveCarousel = (): void => {
@@ -197,7 +254,7 @@ export function CarouselGenerator(): JSX.Element {
 
   const handleNewCarousel = (): void => {
     setViewMode("dashboard")
-    setCarouselData(null)
+    setHistory(createHistory(null, 50))
     setSelectedSlideIndex(0)
     setSelectedLayerId(null)
     setSelectedAction(null)
@@ -223,121 +280,57 @@ export function CarouselGenerator(): JSX.Element {
     handleDeleteSlide(selectedSlideIndex)
   }
 
-  const updateCarouselData = (updatedData: CarouselData): void => {
-
-  useEffect(() => {
-    const shortcuts: ShortcutConfig[] = [
-      {
-        key: "s",
-        metaOrCtrl: true,
-        allowInInputs: true,
-        handler: () => handleSaveCarousel(),
-      },
-      {
-        key: "n",
-        metaOrCtrl: true,
-        allowInInputs: true,
-        handler: () => handleNewCarousel(),
-      },
-      {
-        key: "delete",
-        handler: () => handleDeleteCurrentSlide(),
-      },
-      {
-        key: "backspace",
-        handler: () => handleDeleteCurrentSlide(),
-      },
-      {
-        key: "arrowleft",
-        handler: () => handleNavigateSlide("previous"),
-      },
-      {
-        key: "arrowright",
-        handler: () => handleNavigateSlide("next"),
-      },
-    ]
-
-    const unregister = registerKeyboardShortcuts(shortcuts)
-    return unregister
-  }, [
-    carouselData,
-    handleDeleteCurrentSlide,
-    handleNavigateSlide,
-    handleNewCarousel,
-    handleSaveCarousel,
-    selectedSlideIndex,
-    viewMode,
-  ])
-
-
-  useEffect(() => {
-    if (viewMode !== "creation" || !carouselData) return
-
-    const shortcuts: ShortcutConfig[] = [
-      {
-        key: "s",
-        metaOrCtrl: true,
-        allowInInputs: true,
-        handler: () => handleSaveCarousel(),
-      },
-      {
-        key: "n",
-        metaOrCtrl: true,
-        allowInInputs: true,
-        handler: () => handleNewCarousel(),
-      },
-      {
-        key: "delete",
-        handler: () => handleDeleteCurrentSlide(),
-      },
-      {
-        key: "backspace",
-        handler: () => handleDeleteCurrentSlide(),
-      },
-      {
-        key: "arrowleft",
-        handler: () => handleNavigateSlide("previous"),
-      },
-      {
-        key: "arrowright",
-        handler: () => handleNavigateSlide("next"),
-      },
-    ]
-
-    const unregister = registerKeyboardShortcuts(shortcuts)
-    return unregister
-  }, [
-    carouselData,
-    handleDeleteCurrentSlide,
-    handleNavigateSlide,
-    handleNewCarousel,
-    handleSaveCarousel,
-    selectedSlideIndex,
-    viewMode,
-  ])
-
-  const updateCarouselData = (updatedData: CarouselData): void => {
-    setCarouselData(updatedData)
-    // Also update savedCarousels if this carousel is in the list
-=======
-  const updateCarouselData = (updatedData: CarouselData, statusMessage?: string) => {
+  const updateCarouselData = (updatedData: CarouselData, statusMessage?: string): void => {
     commitCarouselChange(updatedData, statusMessage)
   }
 
   useEffect(() => {
-    if (!carouselData) return
+    const shortcuts: ShortcutConfig[] = [
+      {
+        key: "s",
+        metaOrCtrl: true,
+        allowInInputs: true,
+        handler: () => handleSaveCarousel(),
+      },
+      {
+        key: "n",
+        metaOrCtrl: true,
+        allowInInputs: true,
+        handler: () => handleNewCarousel(),
+      },
+      {
+        key: "delete",
+        handler: () => handleDeleteCurrentSlide(),
+      },
+      {
+        key: "backspace",
+        handler: () => handleDeleteCurrentSlide(),
+      },
+      {
+        key: "arrowleft",
+        handler: () => handleNavigateSlide("previous"),
+      },
+      {
+        key: "arrowright",
+        handler: () => handleNavigateSlide("next"),
+      },
+    ]
 
->>>>>>> origin/codex/add-undo/redo-functionality-to-carousel-generator
-    setSavedCarousels((prev) => {
-      const index = prev.findIndex((c) => c.topic === carouselData.topic && c.platform === carouselData.platform)
-      if (index !== -1) {
-        const updated = [...prev]
-        updated[index] = carouselData
-        return updated
-      }
-      return [...prev, carouselData]
-    })
-  }, [carouselData])
+    const unregister = registerKeyboardShortcuts(shortcuts)
+    return unregister
+  }, [
+    carouselData,
+    handleDeleteCurrentSlide,
+    handleNavigateSlide,
+    handleNewCarousel,
+    handleSaveCarousel,
+    selectedSlideIndex,
+    viewMode,
+  ])
+
+  const updateCarouselData = (updatedData: CarouselData, statusMessage?: string): void => {
+    commitCarouselChange(updatedData, statusMessage)
+  }
 
   useEffect(() => {
     if (!carouselData) {
@@ -832,21 +825,29 @@ export function CarouselGenerator(): JSX.Element {
                 <div className="relative z-10 p-6">
                   <div className="max-w-7xl mx-auto">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {savedCarousels.map((carousel, index) => (
+                      {savedCarousels.map((carousel) => (
                         <button
+<<<<<<< HEAD
                           aria-label={`Open carousel ${carousel.topic}`}
                           key={index}
                           onClick={() => {
                             setHistory(createHistory(carousel, 50))
                             setSelectedSlideIndex(0)
                             setSelectedLayerId(null)
+=======
+                          key={carousel.id}
+                          onClick={() => {
+                            setCarouselData(carousel.data)
+>>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
                             setViewMode("creation")
+                            setSelectedSlideIndex(0)
+                            setSelectedLayerId(null)
                           }}
                           className="p-4 rounded-lg border border-border bg-background hover:border-white/20 hover:bg-white/5 transition-colors cursor-pointer text-left"
                         >
-                          <h3 className="font-medium mb-2">{carousel.topic}</h3>
-                          <p className="text-xs text-muted-foreground mb-2">{carousel.platform}</p>
-                          <p className="text-sm text-muted-foreground line-clamp-2">{carousel.summary}</p>
+                          <h3 className="font-medium mb-2">{carousel.data.topic}</h3>
+                          <p className="text-xs text-muted-foreground mb-2">{carousel.data.platform}</p>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{carousel.data.summary}</p>
                         </button>
                       ))}
                     </div>
@@ -915,7 +916,12 @@ export function CarouselGenerator(): JSX.Element {
                   <div className="px-4 py-2">
                     {/* Action buttons */}
 <<<<<<< HEAD
+<<<<<<< HEAD
                     <div className="flex items-center gap-1">
+=======
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1">
+>>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
                       <button
                         aria-label="Toggle export options"
                         onClick={() => setSelectedAction(selectedAction === "export" ? null : "export")}
@@ -1001,6 +1007,7 @@ export function CarouselGenerator(): JSX.Element {
                         <Maximize2 className="w-4 h-4" />
                         <span className="text-[10px]">Size</span>
                       </button>
+<<<<<<< HEAD
 =======
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-1">
@@ -1149,6 +1156,30 @@ export function CarouselGenerator(): JSX.Element {
                         </Tooltip>
                       </div>
 >>>>>>> origin/codex/add-keyboard-shortcuts-for-carousel-generator
+=======
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleSaveCarousel}
+                          disabled={!carouselData}
+                          className="flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Save className="h-4 w-4" />
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSavedCarousels(loadCarousel())
+                            setIsLoadModalOpen(true)
+                          }}
+                          className="flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10"
+                        >
+                          <FolderOpen className="h-4 w-4" />
+                          Load
+                        </button>
+                      </div>
+>>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
                     </div>
                   </div>
                 </div>
@@ -2202,6 +2233,53 @@ export function CarouselGenerator(): JSX.Element {
         </Dialog>
       </div>
     </div>
+<<<<<<< HEAD
     </ErrorBoundary>
+=======
+
+    {isLoadModalOpen && (
+      <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 px-4 py-6">
+        <div className="w-full max-w-xl overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold">Load saved carousel</p>
+              <p className="text-xs text-muted-foreground">Select a carousel saved in your browser.</p>
+            </div>
+            <button
+              onClick={() => setIsLoadModalOpen(false)}
+              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-white/5 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="max-h-[60vh] overflow-auto divide-y divide-border">
+            {savedCarousels.length === 0 ? (
+              <div className="p-4 text-sm text-muted-foreground">No saved carousels yet. Try saving your current work.</div>
+            ) : (
+              savedCarousels.map((entry) => (
+                <button
+                  key={entry.id}
+                  onClick={() => handleLoadCarouselSelection(entry)}
+                  className="w-full cursor-pointer px-4 py-3 text-left transition-colors hover:bg-white/5"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-white">{entry.data.topic}</p>
+                      <p className="text-xs text-muted-foreground">{entry.data.platform}</p>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      {new Date(entry.savedAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{entry.data.summary}</p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+>>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
   )
 }
