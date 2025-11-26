@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import { useState } from "react"
 import type { CarouselData, Platform } from "@/lib/carousel-types"
 import { isCarouselData } from "@/lib/carousel-types"
 import {
@@ -11,7 +10,10 @@ import {
   PLATFORM_OPTIONS,
   TONE_OPTIONS,
 } from "@/lib/constants"
+import { carouselFormSchema, type CarouselFormValues } from "@/lib/validation"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2, Check } from "lucide-react"
+import { useForm } from "react-hook-form"
 
 /**
  * Props for the carousel generation form.
@@ -41,26 +43,32 @@ interface CarouselFormProps {
  * ```
  */
 export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFormProps) {
-  const [topic, setTopic] = useState("")
-  const [platform, setPlatform] = useState<Platform>(DEFAULT_PLATFORM)
-  const [goal, setGoal] = useState("")
-  const [tone, setTone] = useState(DEFAULT_TONE)
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<CarouselFormValues>({
+    resolver: zodResolver(carouselFormSchema),
+    defaultValues: {
+      topic: "",
+      platform: DEFAULT_PLATFORM,
+      goal: "",
+      tone: DEFAULT_TONE,
+    },
+  })
+
+  const selectedPlatform = watch("platform")
+  const selectedTone = watch("tone")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   /**
    * Submits the generation request to `/api/generate`, gracefully handling
    * JSON and streamed responses, surfacing errors, and toggling loading state
    * for the parent component.
-   *
-   * @param e Form submission event.
    */
-  async function handleSubmit(e: React.FormEvent): Promise<void> {
-    e.preventDefault()
-    if (!topic.trim()) {
-      setErrorMessage("Please enter a topic so we can generate your carousel.")
-      return
-    }
-
+  const onSubmit = handleSubmit(async (data) => {
     setErrorMessage(null)
     setIsLoading(true)
 
@@ -68,7 +76,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, platform, goal, tone }),
+        body: JSON.stringify(data),
       })
 
       if (!response.ok) {
@@ -128,6 +136,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         const jsonMatch = fullText.match(/\{[\s\S]*\}/)
         if (jsonMatch) {
           try {
+<<<<<<< HEAD
             const data: unknown = JSON.parse(jsonMatch[0])
             if (!isCarouselData(data)) {
               console.error("Invalid carousel data from streaming response", { data })
@@ -150,7 +159,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         }
       }
     } catch (error) {
-      console.error("Error generating carousel:", { error, topic, platform, goal, tone })
+      console.error("Error generating carousel:", { error, data })
       const fallbackMessage =
         error instanceof Error
           ? error.message
@@ -159,18 +168,21 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
     } finally {
       setIsLoading(false)
     }
-  }
+  })
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 text-sm">
+    <form onSubmit={onSubmit} className="space-y-3 text-sm" noValidate>
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Topic</label>
         <input
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-muted-foreground transition-colors"
           placeholder="How to grow on LinkedIn in 2025"
-          value={topic}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTopic(e.target.value)}
+          aria-invalid={!!errors.topic}
+          {...register("topic")}
         />
+        {errors.topic && (
+          <p className="text-xs text-destructive">{errors.topic.message}</p>
+        )}
       </div>
 
       <div className="space-y-1">
@@ -179,24 +191,27 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           rows={3}
           className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-muted-foreground transition-colors"
           placeholder="Explain what the user will learn, why it matters, and what action they should take."
-          value={goal}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setGoal(e.target.value)}
+          aria-invalid={!!errors.goal}
+          {...register("goal")}
         />
+        {errors.goal && (
+          <p className="text-xs text-destructive">{errors.goal.message}</p>
+        )}
       </div>
 
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Platform</label>
         <div className="grid grid-cols-2 gap-2">
           {PLATFORM_OPTIONS.map((p) => {
-            const isSelected = platform === p.value
+            const isSelected = selectedPlatform === p.value
             return (
               <button
                 key={p.value}
                 type="button"
-                onClick={() => setPlatform(p.value)}
+                onClick={() => setValue("platform", p.value, { shouldValidate: true })}
                 className={`
                   relative flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all cursor-pointer
-                  ${isSelected 
+                  ${isSelected
                     ? "border-white/30 bg-white/10 shadow-lg shadow-black/20" 
                     : "border-border bg-background hover:border-white/20 hover:bg-white/5"
                   }
@@ -219,21 +234,24 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
             )
           })}
         </div>
+        {errors.platform && (
+          <p className="text-xs text-destructive">{errors.platform.message}</p>
+        )}
       </div>
 
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Tone</label>
         <div className="grid grid-cols-2 gap-2">
           {TONE_OPTIONS.map((t) => {
-            const isSelected = tone === t.value
+            const isSelected = selectedTone === t.value
             return (
               <button
                 key={t.value}
                 type="button"
-                onClick={() => setTone(t.value)}
+                onClick={() => setValue("tone", t.value, { shouldValidate: true })}
                 className={`
                   relative flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all cursor-pointer
-                  ${isSelected 
+                  ${isSelected
                     ? "border-white/30 bg-white/10 shadow-lg shadow-black/20" 
                     : "border-border bg-background hover:border-white/20 hover:bg-white/5"
                   }
@@ -249,6 +267,9 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
             )
           })}
         </div>
+        {errors.tone && (
+          <p className="text-xs text-destructive">{errors.tone.message}</p>
+        )}
       </div>
 
       {errorMessage ? (
@@ -259,7 +280,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
 
       <button
         type="submit"
-        disabled={isLoading || !topic.trim()}
+        disabled={isLoading || !watch("topic")?.trim()}
         className="mt-1 w-full rounded-lg bg-[#e8e4df] py-2 text-sm font-medium text-[#1a1a1a] hover:bg-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {isLoading ? (
