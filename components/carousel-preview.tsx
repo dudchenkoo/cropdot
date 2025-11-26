@@ -4,7 +4,7 @@ import { useState } from "react"
 import type { CarouselData } from "@/lib/carousel-types"
 import { SlideCard } from "./slide-card"
 import { Button } from "@/components/ui/button"
-import { Layers, Square, Grid3x3, Plus, ChevronLeft, ChevronRight } from "lucide-react"
+import { Layers, Square, Grid3x3, Plus, ChevronLeft, ChevronRight, Copy, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface CarouselPreviewProps {
@@ -14,10 +14,11 @@ interface CarouselPreviewProps {
   onSlideChange?: (index: number) => void
   onAddSlide?: (afterIndex: number) => void
   onDeleteSlide?: (index: number) => void
+  onDuplicateSlide?: (index: number) => void
   onReorderSlides?: (fromIndex: number, toIndex: number) => void
 }
 
-export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide, onSlideChange, onAddSlide, onDeleteSlide, onReorderSlides }: CarouselPreviewProps) {
+export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide, onSlideChange, onAddSlide, onDeleteSlide, onDuplicateSlide, onReorderSlides }: CarouselPreviewProps) {
   const [internalSlide, setInternalSlide] = useState(0)
   const [viewMode, setViewMode] = useState<"single" | "grid">("single")
   const [draggedSlideIndex, setDraggedSlideIndex] = useState<number | null>(null)
@@ -91,6 +92,53 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
 
       {viewMode === "single" ? (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
+          {/* Action buttons at the top */}
+          <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-background/95 backdrop-blur-sm">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
+                disabled={currentSlide === 0}
+                title="Previous slide"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
+                disabled={currentSlide === slides.length - 1}
+                title="Next slide"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              {onDuplicateSlide && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onDuplicateSlide(currentSlide)}
+                  title="Duplicate slide"
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              )}
+              {onDeleteSlide && slides.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => onDeleteSlide(currentSlide)}
+                  title="Delete slide"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center justify-center gap-3 relative max-w-5xl mx-auto">
             {/* Previous Slide - left side */}

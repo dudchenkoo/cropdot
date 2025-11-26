@@ -531,6 +531,37 @@ export function CarouselGenerator(): JSX.Element {
     setSelectedLayerId(null)
   }
 
+  const handleDuplicateSlide = (slideIndex: number): void => {
+    if (!carouselData) return
+    
+    const slideToDuplicate = carouselData.slides[slideIndex]
+    if (!slideToDuplicate) return
+    
+    // Create a deep copy of the slide
+    const duplicatedSlide: Slide = {
+      ...slideToDuplicate,
+      index: slideIndex + 2,
+      layers: slideToDuplicate.layers?.map((layer) => ({
+        ...layer,
+        id: generateLayerId(),
+      })) || [],
+    }
+    
+    const updatedSlides = [
+      ...carouselData.slides.slice(0, slideIndex + 1),
+      duplicatedSlide,
+      ...carouselData.slides.slice(slideIndex + 1).map((slide, idx) => ({
+        ...slide,
+        index: slideIndex + 3 + idx,
+      })),
+    ]
+    
+    const updatedData = { ...carouselData, slides: updatedSlides }
+    updateCarouselData(updatedData, "Slide duplicated")
+    setSelectedSlideIndex(slideIndex + 1)
+    setSelectedLayerId(null)
+  }
+
   const handleDeleteSlide = (slideIndex: number): void => {
     if (!carouselData || carouselData.slides.length <= 1) return
     
@@ -835,6 +866,7 @@ export function CarouselGenerator(): JSX.Element {
                         }}
                         onAddSlide={handleAddSlide}
                         onDeleteSlide={handleDeleteSlide}
+                        onDuplicateSlide={handleDuplicateSlide}
                         onReorderSlides={handleReorderSlides}
                       />
                     </ErrorBoundary>
