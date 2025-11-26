@@ -83,9 +83,6 @@ export function CarouselGenerator(): JSX.Element {
     { label: "Next slide", keys: ["→"] },
   ]
 
-<<<<<<< HEAD
-  const handleGenerate = (data: CarouselData): void => {
-=======
   useEffect(() => {
     if (!selectedAction) return
 
@@ -142,15 +139,12 @@ export function CarouselGenerator(): JSX.Element {
     setViewMode("creation")
   }
 
-<<<<<<< HEAD
-  const updateCarouselData = (updatedData: CarouselData): void => {
-=======
-  const handleSelectSlide = (index: number) => {
+  const handleSelectSlide = (index: number): void => {
     setSelectedSlideIndex(index)
     setSelectedLayerId(null)
   }
 
-  const handleSaveCarousel = () => {
+  const handleSaveCarousel = (): void => {
     if (!carouselData) return
 
     setSavedCarousels((prev) => {
@@ -171,15 +165,15 @@ export function CarouselGenerator(): JSX.Element {
     setTimeout(() => setSavedStatus(null), 1500)
   }
 
-  const handleNewCarousel = () => {
+  const handleNewCarousel = (): void => {
+    setViewMode("dashboard")
     setCarouselData(null)
     setSelectedSlideIndex(0)
     setSelectedLayerId(null)
     setSelectedAction(null)
-    setViewMode("creation")
   }
 
-  const handleNavigateSlide = (direction: "next" | "previous") => {
+  const handleNavigateSlide = (direction: "next" | "previous"): void => {
     if (!carouselData || viewMode !== "creation") return
 
     const totalSlides = carouselData.slides.length
@@ -194,10 +188,12 @@ export function CarouselGenerator(): JSX.Element {
     }
   }
 
-  const handleDeleteCurrentSlide = () => {
-    if (!carouselData || viewMode !== "creation") return
+  const handleDeleteCurrentSlide = (): void => {
+    if (!carouselData || viewMode !== "creation" || carouselData.slides.length <= 1) return
     handleDeleteSlide(selectedSlideIndex)
   }
+
+  const updateCarouselData = (updatedData: CarouselData): void => {
 
   useEffect(() => {
     const shortcuts: ShortcutConfig[] = [
@@ -243,35 +239,6 @@ export function CarouselGenerator(): JSX.Element {
     viewMode,
   ])
 
-  const handleSaveCarousel = () => {
-    // TODO: Implement save functionality
-    if (carouselData) {
-      setSavedStatus("Carousel saved")
-      setTimeout(() => setSavedStatus(null), 1500)
-    }
-  }
-
-  const handleNewCarousel = () => {
-    setViewMode("dashboard")
-    setCarouselData(null)
-    setSelectedSlideIndex(0)
-    setSelectedLayerId(null)
-  }
-
-  const handleDeleteCurrentSlide = () => {
-    if (carouselData && carouselData.slides.length > 1) {
-      handleDeleteSlide(selectedSlideIndex)
-    }
-  }
-
-  const handleNavigateSlide = (direction: "previous" | "next") => {
-    if (!carouselData) return
-    if (direction === "previous" && selectedSlideIndex > 0) {
-      setSelectedSlideIndex(selectedSlideIndex - 1)
-    } else if (direction === "next" && selectedSlideIndex < carouselData.slides.length - 1) {
-      setSelectedSlideIndex(selectedSlideIndex + 1)
-    }
-  }
 
   useEffect(() => {
     if (viewMode !== "creation" || !carouselData) return
@@ -852,20 +819,6 @@ export function CarouselGenerator(): JSX.Element {
                       />
                     </ErrorBoundary>
                   </div>
-=======
-            {carouselData ? (
-              <>
-                <div className="relative z-10 flex items-center justify-center min-h-full pb-24">
-                  <CarouselPreview
-                    data={carouselData}
-                    isLoading={isLoading}
-                    currentSlide={selectedSlideIndex}
-                    onSlideChange={handleSelectSlide}
-                    onAddSlide={handleAddSlide}
-                    onDeleteSlide={handleDeleteSlide}
-                    onReorderSlides={handleReorderSlides}
-                  />
-                </div>
 >>>>>>> origin/codex/add-keyboard-shortcuts-for-carousel-generator
                 
                 {/* Fixed Bottom Action Panel */}
@@ -1418,10 +1371,7 @@ export function CarouselGenerator(): JSX.Element {
                               className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
 <<<<<<< HEAD
                               placeholder={DEFAULT_BACKGROUND_COLOR}
-=======
-                              placeholder="#1a1a1a"
                               aria-label="Background color value"
->>>>>>> origin/codex/add-accessibility-features-to-carousel-components
                             />
                           </div>
                         </div>
@@ -1460,10 +1410,7 @@ export function CarouselGenerator(): JSX.Element {
                             className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
 <<<<<<< HEAD
                             placeholder={DEFAULT_ACCENT_COLOR}
-=======
-                            placeholder="#ffffff"
                             aria-label="Accent color value"
->>>>>>> origin/codex/add-accessibility-features-to-carousel-components
                           />
                         </div>
                       </div>
@@ -1552,7 +1499,6 @@ export function CarouselGenerator(): JSX.Element {
                                 </button>
                               </div>
                               {carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacityEnabled && (
-<<<<<<< HEAD
                                   <input
                                     type="range"
                                     min={PATTERN_OPACITY_RANGE.min}
@@ -1563,18 +1509,8 @@ export function CarouselGenerator(): JSX.Element {
                                       pattern: { opacity: parseFloat(e.target.value) }
                                     })}
                                     className="w-full"
+                                    aria-label="Pattern opacity"
                                   />
-=======
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="1"
-                                  step="0.1"
-                                  value={carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacity || 0.5}
-                                  onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
-                                    pattern: { opacity: parseFloat(e.target.value) }
-                                  })}
-                                  className="w-full"
                                   aria-label="Pattern opacity"
                                 />
 >>>>>>> origin/codex/add-accessibility-features-to-carousel-components
@@ -1608,7 +1544,6 @@ export function CarouselGenerator(): JSX.Element {
                                 </button>
                               </div>
                               {carouselData.slides[selectedSlideIndex]?.background?.pattern?.scaleEnabled && (
-<<<<<<< HEAD
                                   <input
                                     type="range"
                                     min={PATTERN_SCALE_RANGE.min}
@@ -1619,18 +1554,8 @@ export function CarouselGenerator(): JSX.Element {
                                       pattern: { scale: parseFloat(e.target.value) }
                                     })}
                                     className="w-full"
+                                    aria-label="Pattern scale"
                                   />
-=======
-                                <input
-                                  type="range"
-                                  min="0.5"
-                                  max="2"
-                                  step="0.1"
-                                  value={carouselData.slides[selectedSlideIndex]?.background?.pattern?.scale || 1}
-                                  onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
-                                    pattern: { scale: parseFloat(e.target.value) }
-                                  })}
-                                  className="w-full"
                                   aria-label="Pattern scale"
                                 />
 >>>>>>> origin/codex/add-accessibility-features-to-carousel-components
