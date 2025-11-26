@@ -33,6 +33,7 @@ import { generateLayerId, slideToLayers, getPatternBackground } from "@/lib/help
 import { CarouselForm } from "./carousel-form"
 import { CarouselPreview } from "./carousel-preview"
 import { Header } from "./header"
+import { ErrorBoundary } from "./error-boundary"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { generateLayerId, getPatternBackground, slideToLayers } from "@/lib/helpers"
@@ -416,11 +417,12 @@ export function CarouselGenerator(): JSX.Element {
   // Dashboard view - show when viewMode is dashboard
   if (viewMode === "dashboard") {
     return (
-      <div className={`flex h-screen overflow-hidden bg-background ${interTight.variable}`}>
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <Header subtitle={undefined} onBack={undefined} onLogoClick={() => setViewMode("dashboard")} />
-
+      <ErrorBoundary componentName="CarouselGenerator">
+        <div className={`flex h-screen overflow-hidden bg-background ${interTight.variable}`}>
           <div className="flex flex-1 flex-col overflow-hidden">
+            <Header subtitle={undefined} onBack={undefined} onLogoClick={() => setViewMode("dashboard")} />
+
+            <div className="flex flex-1 flex-col overflow-hidden">
             {/* Dashboard Title Section */}
             <div className="border-b border-border px-6 py-4">
               <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -561,52 +563,56 @@ export function CarouselGenerator(): JSX.Element {
           </div>
         </div>
       </div>
+      </ErrorBoundary>
     )
   }
 
   // Creation view - show when viewMode is creation
   return (
-    <div className={`flex h-screen overflow-hidden bg-background ${interTight.variable}`}>
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header 
-          topic={carouselData?.topic}
-          platform={carouselData?.platform}
-          onBack={() => setViewMode("dashboard")} 
-          onLogoClick={() => setViewMode("dashboard")}
-        />
+    <ErrorBoundary componentName="CarouselGenerator">
+      <div className={`flex h-screen overflow-hidden bg-background ${interTight.variable}`}>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header
+            topic={carouselData?.topic}
+            platform={carouselData?.platform}
+            onBack={() => setViewMode("dashboard")}
+            onLogoClick={() => setViewMode("dashboard")}
+          />
 
-        <div className="flex flex-1 overflow-hidden">
-          <section
-            className="flex-1 overflow-auto relative"
-            style={{
-              backgroundColor: "#0a0a0a",
-              backgroundImage: `radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px)`,
-              backgroundSize: "20px 20px",
-            }}
-          >
-            <div
-              className="absolute inset-0 pointer-events-none"
+          <div className="flex flex-1 overflow-hidden">
+            <section
+              className="flex-1 overflow-auto relative"
               style={{
-                boxShadow: "inset 0 0 100px rgba(0,0,0,0.5)",
+                backgroundColor: "#0a0a0a",
+                backgroundImage: `radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px)`,
+                backgroundSize: "20px 20px",
               }}
-            />
+            >
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  boxShadow: "inset 0 0 100px rgba(0,0,0,0.5)",
+                }}
+              />
 
-            {carouselData ? (
-              <>
-                <div className="relative z-10 flex items-center justify-center min-h-full pb-24">
-                  <CarouselPreview 
-                    data={carouselData} 
-                    isLoading={isLoading}
-                    currentSlide={selectedSlideIndex}
-                    onSlideChange={(index) => {
-                      setSelectedSlideIndex(index)
-                      setSelectedLayerId(null)
-                    }}
-                    onAddSlide={handleAddSlide}
-                    onDeleteSlide={handleDeleteSlide}
-                    onReorderSlides={handleReorderSlides}
-                  />
-                </div>
+              {carouselData ? (
+                <>
+                  <div className="relative z-10 flex items-center justify-center min-h-full pb-24">
+                    <ErrorBoundary componentName="CarouselPreview">
+                      <CarouselPreview
+                        data={carouselData}
+                        isLoading={isLoading}
+                        currentSlide={selectedSlideIndex}
+                        onSlideChange={(index) => {
+                          setSelectedSlideIndex(index)
+                          setSelectedLayerId(null)
+                        }}
+                        onAddSlide={handleAddSlide}
+                        onDeleteSlide={handleDeleteSlide}
+                        onReorderSlides={handleReorderSlides}
+                      />
+                    </ErrorBoundary>
+                  </div>
                 
                 {/* Fixed Bottom Action Panel */}
                 <div className="fixed bottom-0 left-0 right-[380px] z-20 border-t border-border bg-background/95 backdrop-blur-sm">
@@ -1613,7 +1619,9 @@ export function CarouselGenerator(): JSX.Element {
                   <span className="text-sm font-medium">AI writer</span>
                 </div>
                 <div className="flex-1 overflow-auto px-4 py-4">
-                  <CarouselForm onGenerate={handleGenerate} isLoading={isLoading} setIsLoading={setIsLoading} />
+                  <ErrorBoundary componentName="CarouselForm">
+                    <CarouselForm onGenerate={handleGenerate} isLoading={isLoading} setIsLoading={setIsLoading} />
+                  </ErrorBoundary>
                 </div>
               </div>
             )}
@@ -1621,5 +1629,6 @@ export function CarouselGenerator(): JSX.Element {
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   )
 }
