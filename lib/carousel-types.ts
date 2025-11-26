@@ -30,6 +30,11 @@ export interface LayerStyle {
   fontFamily?: string
   fontSize?: string
   textTransform?: TextTransform
+  bold?: boolean
+  italic?: boolean
+  underline?: boolean
+  strikethrough?: boolean
+  listType?: "ordered" | "unordered" | null
 }
 
 export interface Layer {

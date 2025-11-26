@@ -209,6 +209,22 @@ export function getLayerStyles(layer: Layer, compact: boolean): { style: React.C
     style.textTransform = layer.style.textTransform
   }
 
+  if (layer.style?.bold) {
+    style.fontWeight = "bold"
+  }
+
+  if (layer.style?.italic) {
+    style.fontStyle = "italic"
+  }
+
+  if (layer.style?.underline) {
+    style.textDecoration = "underline"
+  }
+
+  if (layer.style?.strikethrough) {
+    style.textDecoration = layer.style.underline ? "underline line-through" : "line-through"
+  }
+
   if (layer.style?.highlightColor) {
     style.backgroundColor = layer.style.highlightColor
     style.padding = "0.125rem 0.25rem"

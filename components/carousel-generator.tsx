@@ -3,7 +3,7 @@
 import type React from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Inter_Tight } from "next/font/google"
-import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FilePlus, Keyboard, Undo2, Redo2, FolderOpen, X, Shuffle, Info } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical, Save, FilePlus, Keyboard, Undo2, Redo2, FolderOpen, X, Shuffle, Info, Bold, Italic, Underline, Strikethrough, ListOrdered, List } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { templates, type Template } from "@/lib/templates"
 import {
@@ -1165,6 +1165,110 @@ export function CarouselGenerator(): JSX.Element {
                   {/* Text Styling View */}
                   {selectedAction === "text" && selectedLayer ? (
                     <div className="p-4 space-y-4">
+                      {/* Text Formatting Toolbar */}
+                      <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                        <div className="flex items-center gap-1">
+                          {/* Bold */}
+                          <button
+                            aria-label="Toggle bold"
+                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                              bold: !selectedLayer.style?.bold 
+                            })}
+                            className={cn(
+                              "p-2 rounded transition-colors",
+                              selectedLayer.style?.bold
+                                ? "bg-accent/20 text-accent"
+                                : "text-muted-foreground hover:text-white hover:bg-white/5"
+                            )}
+                          >
+                            <Bold className="w-4 h-4" />
+                          </button>
+                          
+                          {/* Italic */}
+                          <button
+                            aria-label="Toggle italic"
+                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                              italic: !selectedLayer.style?.italic 
+                            })}
+                            className={cn(
+                              "p-2 rounded transition-colors",
+                              selectedLayer.style?.italic
+                                ? "bg-accent/20 text-accent"
+                                : "text-muted-foreground hover:text-white hover:bg-white/5"
+                            )}
+                          >
+                            <Italic className="w-4 h-4" />
+                          </button>
+                          
+                          {/* Underline */}
+                          <button
+                            aria-label="Toggle underline"
+                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                              underline: !selectedLayer.style?.underline 
+                            })}
+                            className={cn(
+                              "p-2 rounded transition-colors",
+                              selectedLayer.style?.underline
+                                ? "bg-accent/20 text-accent"
+                                : "text-muted-foreground hover:text-white hover:bg-white/5"
+                            )}
+                          >
+                            <Underline className="w-4 h-4" />
+                          </button>
+                          
+                          {/* Strikethrough */}
+                          <button
+                            aria-label="Toggle strikethrough"
+                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                              strikethrough: !selectedLayer.style?.strikethrough 
+                            })}
+                            className={cn(
+                              "p-2 rounded transition-colors",
+                              selectedLayer.style?.strikethrough
+                                ? "bg-accent/20 text-accent"
+                                : "text-muted-foreground hover:text-white hover:bg-white/5"
+                            )}
+                          >
+                            <Strikethrough className="w-4 h-4" />
+                          </button>
+                          
+                          {/* Separator */}
+                          <div className="w-px h-6 bg-white/10 mx-1" />
+                          
+                          {/* Numbered List */}
+                          <button
+                            aria-label="Toggle numbered list"
+                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                              listType: selectedLayer.style?.listType === "ordered" ? null : "ordered"
+                            })}
+                            className={cn(
+                              "p-2 rounded transition-colors",
+                              selectedLayer.style?.listType === "ordered"
+                                ? "bg-accent/20 text-accent"
+                                : "text-muted-foreground hover:text-white hover:bg-white/5"
+                            )}
+                          >
+                            <ListOrdered className="w-4 h-4" />
+                          </button>
+                          
+                          {/* Bulleted List */}
+                          <button
+                            aria-label="Toggle bulleted list"
+                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                              listType: selectedLayer.style?.listType === "unordered" ? null : "unordered"
+                            })}
+                            className={cn(
+                              "p-2 rounded transition-colors",
+                              selectedLayer.style?.listType === "unordered"
+                                ? "bg-accent/20 text-accent"
+                                : "text-muted-foreground hover:text-white hover:bg-white/5"
+                            )}
+                          >
+                            <List className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="space-y-2">
                         <label className="text-sm text-muted-foreground">Highlight Color</label>
                         <div className="flex items-center gap-2">
