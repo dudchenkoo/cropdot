@@ -1,8 +1,8 @@
 import type { Platform, Slide } from "./carousel-types"
 
 export const DEFAULT_PADDING = 24
-export const DEFAULT_HORIZONTAL_ALIGN: Slide["layout"]!["horizontalAlign"] = "left"
-export const DEFAULT_VERTICAL_ALIGN: Slide["layout"]!["verticalAlign"] = "stretch"
+export const DEFAULT_HORIZONTAL_ALIGN: "left" | "center" | "right" = "left"
+export const DEFAULT_VERTICAL_ALIGN: "top" | "center" | "bottom" | "stretch" = "stretch"
 export const DEFAULT_FONT_FAMILY = "Inter"
 export const DEFAULT_FONT_SIZE = "base"
 export const DEFAULT_HIGHLIGHT_COLOR = "#ffffff"

@@ -274,10 +274,6 @@ export function CarouselGenerator(): JSX.Element {
     viewMode,
   ])
 
-  const updateCarouselData = (updatedData: CarouselData, statusMessage?: string): void => {
-    commitCarouselChange(updatedData, statusMessage)
-  }
-
   useEffect(() => {
     if (!carouselData) {
       setSelectedSlideIndex(0)
@@ -843,7 +839,6 @@ export function CarouselGenerator(): JSX.Element {
                       />
                     </ErrorBoundary>
                   </div>
->>>>>>> origin/codex/add-keyboard-shortcuts-for-carousel-generator
                 
                 {/* Fixed Bottom Action Panel */}
                 <div className="fixed bottom-0 left-0 right-[380px] z-20 border-t border-border bg-background/95 backdrop-blur-sm">
@@ -936,18 +931,9 @@ export function CarouselGenerator(): JSX.Element {
                         <Maximize2 className="w-4 h-4" />
                         <span className="text-[10px]">Size</span>
                       </button>
-                          onClick={() => setSelectedAction(selectedAction === "export" ? null : "export")}
-                          className={cn(
-                            "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
-                            selectedAction === "export"
-                              ? "bg-accent/20 text-accent"
-                              : "text-muted-foreground hover:text-white hover:bg-white/5",
-                          )}
-                        >
-                          <Upload className="w-4 h-4" />
-                          <span className="text-[10px]">Export</span>
-                        </button>
-                        <button
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
                           onClick={() => setSelectedAction(selectedAction === "template" ? null : "template")}
                           className={cn(
                             "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
@@ -1175,7 +1161,6 @@ export function CarouselGenerator(): JSX.Element {
           <aside className="w-[380px] border-l border-border flex flex-col bg-background">
             {carouselData ? (
               <div className="flex flex-col h-full">
-<<<<<<< HEAD
                 <div className="flex items-center justify-between border-b border-border px-4 py-3">
                   <div className="flex items-center gap-2">
                     {selectedAction && (
@@ -1197,25 +1182,7 @@ export function CarouselGenerator(): JSX.Element {
                        selectedAction === "size" ? "Size" :
                        "Edit slide"}
                     </span>
-                    {selectedAction && (
-                      <button
-                        onClick={() => {
-                          setSelectedAction(null)
-                        }}
-                        className="p-1 rounded hover:bg-white/10 transition-colors"
-                      >
-                        <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                    )}
-                      <span className="text-sm font-medium">
-                        {selectedAction === "text" ? "Text Styling" :
-                         selectedAction === "background" ? "Background Settings" :
-                         selectedAction === "template" ? "Template" :
-                         selectedAction === "layout" ? "Layout" :
-                         selectedAction === "size" ? "Size" :
-                         "Edit slide"}
-                      </span>
-                    </div>
+                  </div>
                     <div className="flex items-center gap-2">
                       {!selectedAction && (
                         <span className="text-xs text-muted-foreground">
@@ -1243,7 +1210,6 @@ export function CarouselGenerator(): JSX.Element {
                         </Button>
                       </div>
                     </div>
->>>>>>> origin/codex/add-undo/redo-functionality-to-carousel-generator
                   </div>
 
                 <div className="flex-1 overflow-auto" ref={actionPanelRef}>
@@ -1265,7 +1231,6 @@ export function CarouselGenerator(): JSX.Element {
                             value={selectedLayer.style?.highlightColor || DEFAULT_HIGHLIGHT_COLOR}
                             onChange={(e) => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { highlightColor: e.target.value })}
                             className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
-<<<<<<< HEAD
                             placeholder={DEFAULT_HIGHLIGHT_COLOR}
                             aria-label="Highlight color value"
                           />
@@ -1451,7 +1416,6 @@ export function CarouselGenerator(): JSX.Element {
                               value={carouselData.slides[selectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR}
                               onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { color: e.target.value })}
                               className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
-<<<<<<< HEAD
                               placeholder={DEFAULT_BACKGROUND_COLOR}
                               aria-label="Background color value"
                             />
@@ -1490,7 +1454,6 @@ export function CarouselGenerator(): JSX.Element {
                             value={carouselData.slides[selectedSlideIndex]?.background?.accentColor || DEFAULT_ACCENT_COLOR}
                             onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { accentColor: e.target.value })}
                             className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
-<<<<<<< HEAD
                             placeholder={DEFAULT_ACCENT_COLOR}
                             aria-label="Accent color value"
                           />
@@ -1593,9 +1556,6 @@ export function CarouselGenerator(): JSX.Element {
                                     className="w-full"
                                     aria-label="Pattern opacity"
                                   />
-                                  aria-label="Pattern opacity"
-                                />
->>>>>>> origin/codex/add-accessibility-features-to-carousel-components
                               )}
                             </div>
 
@@ -1638,9 +1598,6 @@ export function CarouselGenerator(): JSX.Element {
                                     className="w-full"
                                     aria-label="Pattern scale"
                                   />
-                                  aria-label="Pattern scale"
-                                />
->>>>>>> origin/codex/add-accessibility-features-to-carousel-components
                               )}
                             </div>
                           </>
@@ -2194,6 +2151,6 @@ export function CarouselGenerator(): JSX.Element {
         </div>
       </div>
     )}
->>>>>>> origin/codex/implement-carousel-save/load-with-localstorage
+    </ErrorBoundary>
   )
 }

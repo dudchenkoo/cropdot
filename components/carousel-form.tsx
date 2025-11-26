@@ -136,7 +136,6 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         const jsonMatch = fullText.match(/\{[\s\S]*\}/)
         if (jsonMatch) {
           try {
-<<<<<<< HEAD
             const data: unknown = JSON.parse(jsonMatch[0])
             if (!isCarouselData(data)) {
               console.error("Invalid carousel data from streaming response", { data })
