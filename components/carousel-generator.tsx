@@ -6,6 +6,29 @@ import { Inter_Tight } from "next/font/google"
 import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, Sparkles, ChevronLeft, ChevronRight, Upload, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, MoveVertical } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { templates, type Template } from "@/lib/templates"
+import {
+  BACKGROUND_TYPES,
+  DEFAULT_ACCENT_COLOR,
+  DEFAULT_BACKGROUND_COLOR,
+  DEFAULT_BACKGROUND_TYPE,
+  DEFAULT_FONT_FAMILY,
+  DEFAULT_FONT_SIZE,
+  DEFAULT_HIGHLIGHT_COLOR,
+  DEFAULT_HORIZONTAL_ALIGN,
+  DEFAULT_PADDING,
+  DEFAULT_PATTERN_OPACITY,
+  DEFAULT_PATTERN_SCALE,
+  DEFAULT_SIZE,
+  DEFAULT_VERTICAL_ALIGN,
+  FONT_FAMILY_OPTIONS,
+  FONT_SIZE_OPTIONS,
+  LAYER_CONTENT_DEFAULTS,
+  PADDING_RANGE,
+  PATTERN_OPACITY_RANGE,
+  PATTERN_SCALE_RANGE,
+  PATTERN_TYPES,
+  SIZE_OPTIONS,
+} from "@/lib/constants"
 import { CarouselForm } from "./carousel-form"
 import { CarouselPreview } from "./carousel-preview"
 import { Header } from "./header"
@@ -39,7 +62,7 @@ function slideToLayers(slide: CarouselData["slides"][0]): Layer[] {
 
 // Helper function to generate pattern background for template previews
 function getPatternBackground(
-  pattern: "dots" | "cells" | "lines" | "grid" | "diagonal" | "waves",
+  pattern: (typeof PATTERN_TYPES)[number],
   color: string,
   opacity: number
 ): string {
@@ -207,8 +230,12 @@ export function CarouselGenerator() {
         return {
           ...slide,
           layout: {
-            ...(slide.layout || { padding: 24, horizontalAlign: "left", verticalAlign: "stretch" }),
-            ...layout
+            ...(slide.layout || {
+              padding: DEFAULT_PADDING,
+              horizontalAlign: DEFAULT_HORIZONTAL_ALIGN,
+              verticalAlign: DEFAULT_VERTICAL_ALIGN,
+            }),
+            ...layout,
           }
         }
       }
@@ -243,12 +270,12 @@ export function CarouselGenerator() {
       type,
       content:
         type === "heading"
-          ? "New heading"
+          ? LAYER_CONTENT_DEFAULTS.heading
           : type === "subheading"
-            ? "New subheading"
+            ? LAYER_CONTENT_DEFAULTS.subheading
             : type === "bullet"
-              ? "New bullet point"
-              : "New text",
+              ? LAYER_CONTENT_DEFAULTS.bullet
+              : LAYER_CONTENT_DEFAULTS.body,
       visible: true,
     }
     const updatedSlides = carouselData.slides.map((slide, index) => {
@@ -288,11 +315,12 @@ export function CarouselGenerator() {
       type: "text",
       body: "",
       content: "",
+      size: DEFAULT_SIZE,
       layers: [
         {
           id: generateLayerId(),
           type: "heading",
-          content: "New slide",
+          content: LAYER_CONTENT_DEFAULTS.slideHeading,
           visible: true
         }
       ]
@@ -809,16 +837,16 @@ export function CarouselGenerator() {
                         <div className="flex items-center gap-2">
                           <input
                             type="color"
-                            value={selectedLayer.style?.highlightColor || "#ffffff"}
+                            value={selectedLayer.style?.highlightColor || DEFAULT_HIGHLIGHT_COLOR}
                             onChange={(e) => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { highlightColor: e.target.value })}
                             className="w-12 h-10 rounded border border-white/10 bg-white/5 cursor-pointer"
                           />
                           <input
                             type="text"
-                            value={selectedLayer.style?.highlightColor || "#ffffff"}
+                            value={selectedLayer.style?.highlightColor || DEFAULT_HIGHLIGHT_COLOR}
                             onChange={(e) => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { highlightColor: e.target.value })}
                             className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
-                            placeholder="#ffffff"
+                            placeholder={DEFAULT_HIGHLIGHT_COLOR}
                           />
                         </div>
                       </div>
@@ -826,10 +854,10 @@ export function CarouselGenerator() {
                       <div className="space-y-2">
                         <label className="text-sm text-muted-foreground">Font Family</label>
                         <div className="grid grid-cols-3 gap-2">
-                          {["Inter", "Roboto", "Open Sans", "Montserrat", "Poppins", "Lato"].map((font) => {
-                            const isSelected = (selectedLayer.style?.fontFamily || "Inter") === font
-                            return (
-                              <button
+                          {FONT_FAMILY_OPTIONS.map((font) => {
+                            const isSelected = (selectedLayer.style?.fontFamily || DEFAULT_FONT_FAMILY) === font
+                              return (
+                                <button
                                 key={font}
                                 onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { fontFamily: font })}
                                 className={cn(
@@ -853,20 +881,30 @@ export function CarouselGenerator() {
 
                       <div className="space-y-2">
                         <label className="text-sm text-muted-foreground">Font Size</label>
-                        <select
-                          value={selectedLayer.style?.fontSize || "base"}
-                          onChange={(e) => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { fontSize: e.target.value })}
-                          className="w-full px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20 cursor-pointer"
-                        >
-                          <option value="xs">Extra Small</option>
-                          <option value="sm">Small</option>
-                          <option value="base">Base</option>
-                          <option value="lg">Large</option>
-                          <option value="xl">Extra Large</option>
-                          <option value="2xl">2X Large</option>
-                          <option value="3xl">3X Large</option>
-                        </select>
-                      </div>
+                          <select
+                            value={selectedLayer.style?.fontSize || DEFAULT_FONT_SIZE}
+                            onChange={(e) => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { fontSize: e.target.value })}
+                            className="w-full px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20 cursor-pointer"
+                          >
+                            {FONT_SIZE_OPTIONS.map((size) => (
+                              <option key={size} value={size}>
+                                {size === "xs"
+                                  ? "Extra Small"
+                                  : size === "sm"
+                                    ? "Small"
+                                    : size === "base"
+                                      ? "Base"
+                                      : size === "lg"
+                                        ? "Large"
+                                        : size === "xl"
+                                          ? "Extra Large"
+                                          : size === "2xl"
+                                            ? "2X Large"
+                                            : "3X Large"}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
                       <div className="space-y-2">
                         <label className="text-sm text-muted-foreground">Text Transform</label>
@@ -947,8 +985,8 @@ export function CarouselGenerator() {
                       <div className="space-y-2">
                         <label className="text-sm text-muted-foreground">Background Type</label>
                         <div className="grid grid-cols-2 gap-2">
-                          {(["color", "photo"] as const).map((type) => {
-                            const currentType = carouselData.slides[selectedSlideIndex]?.background?.type || "color"
+                          {BACKGROUND_TYPES.map((type) => {
+                            const currentType = carouselData.slides[selectedSlideIndex]?.background?.type || DEFAULT_BACKGROUND_TYPE
                             const isSelected = currentType === type
                             return (
                               <button
@@ -975,16 +1013,16 @@ export function CarouselGenerator() {
                           <div className="flex items-center gap-2">
                             <input
                               type="color"
-                              value={carouselData.slides[selectedSlideIndex]?.background?.color || "#1a1a1a"}
+                              value={carouselData.slides[selectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR}
                               onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { color: e.target.value })}
                               className="w-12 h-10 rounded border border-white/10 bg-white/5 cursor-pointer"
                             />
                             <input
                               type="text"
-                              value={carouselData.slides[selectedSlideIndex]?.background?.color || "#1a1a1a"}
+                              value={carouselData.slides[selectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR}
                               onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { color: e.target.value })}
                               className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
-                              placeholder="#1a1a1a"
+                              placeholder={DEFAULT_BACKGROUND_COLOR}
                             />
                           </div>
                         </div>
@@ -1010,16 +1048,16 @@ export function CarouselGenerator() {
                         <div className="flex items-center gap-2">
                           <input
                             type="color"
-                            value={carouselData.slides[selectedSlideIndex]?.background?.accentColor || "#ffffff"}
+                            value={carouselData.slides[selectedSlideIndex]?.background?.accentColor || DEFAULT_ACCENT_COLOR}
                             onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { accentColor: e.target.value })}
                             className="w-12 h-10 rounded border border-white/10 bg-white/5 cursor-pointer"
                           />
                           <input
                             type="text"
-                            value={carouselData.slides[selectedSlideIndex]?.background?.accentColor || "#ffffff"}
+                            value={carouselData.slides[selectedSlideIndex]?.background?.accentColor || DEFAULT_ACCENT_COLOR}
                             onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { accentColor: e.target.value })}
                             className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
-                            placeholder="#ffffff"
+                            placeholder={DEFAULT_ACCENT_COLOR}
                           />
                         </div>
                       </div>
@@ -1055,7 +1093,7 @@ export function CarouselGenerator() {
                             <div className="space-y-2">
                               <label className="text-xs text-muted-foreground">Pattern Type</label>
                               <div className="grid grid-cols-3 gap-2">
-                                {(["dots", "cells", "lines", "grid", "diagonal", "waves"] as const).map((patternType) => {
+                                {PATTERN_TYPES.map((patternType) => {
                                   const currentPattern = carouselData.slides[selectedSlideIndex]?.background?.pattern?.type
                                   const isSelected = currentPattern === patternType
                                   return (
@@ -1103,17 +1141,17 @@ export function CarouselGenerator() {
                                 </button>
                               </div>
                               {carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacityEnabled && (
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="1"
-                                  step="0.1"
-                                  value={carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacity || 0.5}
-                                  onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
-                                    pattern: { opacity: parseFloat(e.target.value) }
-                                  })}
-                                  className="w-full"
-                                />
+                                  <input
+                                    type="range"
+                                    min={PATTERN_OPACITY_RANGE.min}
+                                    max={PATTERN_OPACITY_RANGE.max}
+                                    step={PATTERN_OPACITY_RANGE.step}
+                                    value={carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacity || DEFAULT_PATTERN_OPACITY}
+                                    onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
+                                      pattern: { opacity: parseFloat(e.target.value) }
+                                    })}
+                                    className="w-full"
+                                  />
                               )}
                             </div>
 
@@ -1142,17 +1180,17 @@ export function CarouselGenerator() {
                                 </button>
                               </div>
                               {carouselData.slides[selectedSlideIndex]?.background?.pattern?.scaleEnabled && (
-                                <input
-                                  type="range"
-                                  min="0.5"
-                                  max="2"
-                                  step="0.1"
-                                  value={carouselData.slides[selectedSlideIndex]?.background?.pattern?.scale || 1}
-                                  onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
-                                    pattern: { scale: parseFloat(e.target.value) }
-                                  })}
-                                  className="w-full"
-                                />
+                                  <input
+                                    type="range"
+                                    min={PATTERN_SCALE_RANGE.min}
+                                    max={PATTERN_SCALE_RANGE.max}
+                                    step={PATTERN_SCALE_RANGE.step}
+                                    value={carouselData.slides[selectedSlideIndex]?.background?.pattern?.scale || DEFAULT_PATTERN_SCALE}
+                                    onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
+                                      pattern: { scale: parseFloat(e.target.value) }
+                                    })}
+                                    className="w-full"
+                                  />
                               )}
                             </div>
                           </>
@@ -1187,14 +1225,10 @@ export function CarouselGenerator() {
                       {/* Size Options */}
                       <div className="space-y-2">
                         <label className="text-sm text-muted-foreground">Aspect Ratio</label>
-                        <div className="flex gap-3">
-                          {([
-                            { value: "4:5" as const, label: "Carousel" },
-                            { value: "9:16" as const, label: "Stories" },
-                            { value: "1:1" as const, label: "Square" },
-                          ]).map((option) => {
-                            const currentSize = carouselData.slides[selectedSlideIndex]?.size || "4:5"
-                            const isSelected = currentSize === option.value
+                          <div className="flex gap-3">
+                            {SIZE_OPTIONS.map((option) => {
+                              const currentSize = carouselData.slides[selectedSlideIndex]?.size || DEFAULT_SIZE
+                              const isSelected = currentSize === option.value
                             return (
                               <button
                                 key={option.value}
@@ -1372,15 +1406,15 @@ export function CarouselGenerator() {
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-sm">Content Padding</span>
                                 <span className="text-sm font-medium">
-                                  {carouselData.slides[selectedSlideIndex]?.layout?.padding || 24}px
+                                  {carouselData.slides[selectedSlideIndex]?.layout?.padding || DEFAULT_PADDING}px
                                 </span>
                               </div>
                               <input
-                                type="range"
-                                min="0"
-                                max="80"
-                                step="4"
-                                value={carouselData.slides[selectedSlideIndex]?.layout?.padding || 24}
+                                  type="range"
+                                  min={PADDING_RANGE.min}
+                                  max={PADDING_RANGE.max}
+                                  step={PADDING_RANGE.step}
+                                value={carouselData.slides[selectedSlideIndex]?.layout?.padding || DEFAULT_PADDING}
                                 onChange={(e) => handleLayoutUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { 
                                   padding: parseInt(e.target.value) 
                                 })}
@@ -1399,12 +1433,12 @@ export function CarouselGenerator() {
                         <div className="space-y-2">
                           <label className="text-xs text-muted-foreground">Horizontal</label>
                           <div className="flex gap-2">
-                            {([
-                              { value: "left" as const, icon: AlignLeft },
-                              { value: "center" as const, icon: AlignCenter },
-                              { value: "right" as const, icon: AlignRight },
-                            ]).map(({ value, icon: Icon }) => {
-                              const currentAlign = carouselData.slides[selectedSlideIndex]?.layout?.horizontalAlign || "left"
+                              {([
+                                { value: "left" as const, icon: AlignLeft },
+                                { value: "center" as const, icon: AlignCenter },
+                                { value: "right" as const, icon: AlignRight },
+                              ]).map(({ value, icon: Icon }) => {
+                                const currentAlign = carouselData.slides[selectedSlideIndex]?.layout?.horizontalAlign || DEFAULT_HORIZONTAL_ALIGN
                               const isSelected = currentAlign === value
                               return (
                                 <button
@@ -1433,13 +1467,13 @@ export function CarouselGenerator() {
                         <div className="space-y-2">
                           <label className="text-xs text-muted-foreground">Vertical</label>
                           <div className="flex gap-2">
-                            {([
-                              { value: "top" as const, icon: AlignVerticalJustifyStart },
-                              { value: "center" as const, icon: AlignVerticalJustifyCenter },
-                              { value: "bottom" as const, icon: AlignVerticalJustifyEnd },
-                              { value: "stretch" as const, icon: AlignVerticalDistributeCenter },
-                            ]).map(({ value, icon: Icon }) => {
-                              const currentAlign = carouselData.slides[selectedSlideIndex]?.layout?.verticalAlign || "stretch"
+                              {([
+                                { value: "top" as const, icon: AlignVerticalJustifyStart },
+                                { value: "center" as const, icon: AlignVerticalJustifyCenter },
+                                { value: "bottom" as const, icon: AlignVerticalJustifyEnd },
+                                { value: "stretch" as const, icon: AlignVerticalDistributeCenter },
+                              ]).map(({ value, icon: Icon }) => {
+                                const currentAlign = carouselData.slides[selectedSlideIndex]?.layout?.verticalAlign || DEFAULT_VERTICAL_ALIGN
                               const isSelected = currentAlign === value
                               return (
                                 <button

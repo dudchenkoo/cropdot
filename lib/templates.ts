@@ -1,4 +1,5 @@
 import type { Slide } from "./carousel-types"
+import type { PatternType } from "./constants"
 
 export interface Template {
   id: string
@@ -7,7 +8,7 @@ export interface Template {
   preview: {
     backgroundColor: string
     accentColor: string
-    pattern?: "dots" | "cells" | "lines" | "grid" | "diagonal" | "waves" | null
+    pattern?: PatternType | null
     layout: "centered" | "top" | "split" | "minimal"
   }
   apply: (slide: Slide) => Slide

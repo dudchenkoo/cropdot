@@ -4,6 +4,12 @@ import type React from "react"
 
 import { useState } from "react"
 import type { CarouselData, Platform } from "@/lib/carousel-types"
+import {
+  DEFAULT_PLATFORM,
+  DEFAULT_TONE,
+  PLATFORM_OPTIONS,
+  TONE_OPTIONS,
+} from "@/lib/constants"
 import { Loader2, Check } from "lucide-react"
 
 interface CarouselFormProps {
@@ -12,25 +18,11 @@ interface CarouselFormProps {
   setIsLoading: (loading: boolean) => void
 }
 
-const platforms: { value: Platform; label: string; color: string }[] = [
-  { value: "linkedin", label: "LinkedIn", color: "#0077B5" },
-  { value: "instagram", label: "Instagram", color: "#E4405F" },
-  { value: "telegram", label: "Telegram", color: "#0088cc" },
-  { value: "threads", label: "Threads", color: "#000000" },
-]
-
-const tones: { value: string; label: string }[] = [
-  { value: "professional", label: "Professional" },
-  { value: "friendly", label: "Friendly" },
-  { value: "bold", label: "Bold" },
-  { value: "storytelling", label: "Storytelling" },
-]
-
 export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFormProps) {
   const [topic, setTopic] = useState("")
-  const [platform, setPlatform] = useState<Platform>("linkedin")
+  const [platform, setPlatform] = useState<Platform>(DEFAULT_PLATFORM)
   const [goal, setGoal] = useState("")
-  const [tone, setTone] = useState("professional")
+  const [tone, setTone] = useState(DEFAULT_TONE)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -137,7 +129,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Platform</label>
         <div className="grid grid-cols-2 gap-2">
-          {platforms.map((p) => {
+          {PLATFORM_OPTIONS.map((p) => {
             const isSelected = platform === p.value
             return (
               <button
@@ -174,7 +166,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Tone</label>
         <div className="grid grid-cols-2 gap-2">
-          {tones.map((t) => {
+          {TONE_OPTIONS.map((t) => {
             const isSelected = tone === t.value
             return (
               <button
