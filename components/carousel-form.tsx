@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import type { CarouselData, Platform } from "@/lib/carousel-types"
+import { isCarouselData } from "@/lib/carousel-types"
 import { Loader2, Check } from "lucide-react"
 
 interface CarouselFormProps {
@@ -19,20 +20,22 @@ const platforms: { value: Platform; label: string; color: string }[] = [
   { value: "threads", label: "Threads", color: "#000000" },
 ]
 
-const tones: { value: string; label: string }[] = [
+const tones = [
   { value: "professional", label: "Professional" },
   { value: "friendly", label: "Friendly" },
   { value: "bold", label: "Bold" },
   { value: "storytelling", label: "Storytelling" },
-]
+] as const
+
+type Tone = (typeof tones)[number]["value"]
 
 export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFormProps) {
   const [topic, setTopic] = useState("")
   const [platform, setPlatform] = useState<Platform>("linkedin")
   const [goal, setGoal] = useState("")
-  const [tone, setTone] = useState("professional")
+  const [tone, setTone] = useState<Tone>("professional")
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
     if (!topic.trim()) return
 
@@ -66,7 +69,10 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
       // Handle JSON response (mock data or non-streaming API)
       const contentType = response.headers.get("content-type")
       if (contentType?.includes("application/json")) {
-        const data = await response.json() as CarouselData
+        const data: unknown = await response.json()
+        if (!isCarouselData(data)) {
+          throw new Error("Received invalid carousel data from the server")
+        }
         onGenerate(data)
       } else {
         // Handle streaming response (for future AI integration)
@@ -91,7 +97,10 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         const jsonMatch = fullText.match(/\{[\s\S]*\}/)
         if (jsonMatch) {
           try {
-            const data = JSON.parse(jsonMatch[0]) as CarouselData
+            const data: unknown = JSON.parse(jsonMatch[0])
+            if (!isCarouselData(data)) {
+              throw new Error("Received invalid carousel data from the server")
+            }
             onGenerate(data)
           } catch (parseError) {
             console.error("JSON Parse Error:", parseError)
@@ -119,7 +128,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-muted-foreground transition-colors"
           placeholder="How to grow on LinkedIn in 2025"
           value={topic}
-          onChange={(e) => setTopic(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTopic(e.target.value)}
         />
       </div>
 
@@ -130,7 +139,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-muted-foreground transition-colors"
           placeholder="Explain what the user will learn, why it matters, and what action they should take."
           value={goal}
-          onChange={(e) => setGoal(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setGoal(e.target.value)}
         />
       </div>
 
