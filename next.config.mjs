@@ -12,12 +12,8 @@ const nextConfig = {
   },
   // Enable compression
   compress: true,
-  // Optimize production builds
-  swcMinify: true,
   // Enable React strict mode for better development experience
   reactStrictMode: true,
-  // Optimize fonts
-  optimizeFonts: true,
   // Performance optimizations
   poweredByHeader: false,
   // Enable experimental features for better performance
