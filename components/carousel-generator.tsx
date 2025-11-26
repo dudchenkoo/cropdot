@@ -11,60 +11,12 @@ import { CarouselPreview } from "./carousel-preview"
 import { Header } from "./header"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { generateLayerId, getPatternBackground, slideToLayers } from "@/lib/helpers"
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
   variable: "--font-inter-tight",
 })
-
-function generateLayerId() {
-  return `layer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-}
-
-function slideToLayers(slide: CarouselData["slides"][0]): Layer[] {
-  const layers: Layer[] = []
-  if (slide.title || slide.hook) {
-    layers.push({ id: generateLayerId(), type: "heading", content: slide.title || slide.hook || "", visible: true })
-  }
-  if (slide.content) {
-    layers.push({ id: generateLayerId(), type: "body", content: slide.content, visible: true })
-  }
-  if (slide.bullets) {
-    slide.bullets.forEach((bullet) => {
-      layers.push({ id: generateLayerId(), type: "bullet", content: bullet, visible: true })
-    })
-  }
-  return layers
-}
-
-// Helper function to generate pattern background for template previews
-function getPatternBackground(
-  pattern: "dots" | "cells" | "lines" | "grid" | "diagonal" | "waves",
-  color: string,
-  opacity: number
-): string {
-  const r = parseInt(color.slice(1, 3), 16)
-  const g = parseInt(color.slice(3, 5), 16)
-  const b = parseInt(color.slice(5, 7), 16)
-  const rgba = `rgba(${r}, ${g}, ${b}, ${opacity})`
-  
-  switch (pattern) {
-    case "dots":
-      return `radial-gradient(circle, ${rgba} 1px, transparent 1px)`
-    case "cells":
-      return `linear-gradient(${rgba} 1px, transparent 1px), linear-gradient(90deg, ${rgba} 1px, transparent 1px)`
-    case "lines":
-      return `repeating-linear-gradient(0deg, ${rgba}, ${rgba} 1px, transparent 1px, transparent 20px)`
-    case "grid":
-      return `linear-gradient(${rgba} 1px, transparent 1px), linear-gradient(90deg, ${rgba} 1px, transparent 1px)`
-    case "diagonal":
-      return `repeating-linear-gradient(45deg, ${rgba}, ${rgba} 1px, transparent 1px, transparent 20px)`
-    case "waves":
-      return `radial-gradient(ellipse at center, ${rgba} 1px, transparent 1px)`
-    default:
-      return ""
-  }
-}
 
 export function CarouselGenerator() {
   const [carouselData, setCarouselData] = useState<CarouselData | null>(null)
