@@ -140,19 +140,23 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
                       </h4>
                     )}
                     {layer.type === "body" && (
-                      <p className={cn("text-muted-foreground leading-relaxed", compact ? "text-xs line-clamp-4" : "text-sm", styleClass)} style={style}>
-                        {layer.style?.listType === "ordered" ? (
-                          <ol className="list-decimal list-inside space-y-1">
-                            {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
-                          </ol>
-                        ) : layer.style?.listType === "unordered" ? (
-                          <ul className="list-disc list-inside space-y-1">
-                            {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
-                          </ul>
-                        ) : (
-                          layer.content
-                        )}
-                      </p>
+                      layer.style?.listType ? (
+                        <div className={cn("text-muted-foreground leading-relaxed", compact ? "text-xs line-clamp-4" : "text-sm", styleClass)} style={style}>
+                          {layer.style.listType === "ordered" ? (
+                            <ol className="list-decimal list-inside space-y-1">
+                              {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
+                            </ol>
+                          ) : (
+                            <ul className="list-disc list-inside space-y-1">
+                              {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
+                            </ul>
+                          )}
+                        </div>
+                      ) : (
+                        <p className={cn("text-muted-foreground leading-relaxed", compact ? "text-xs line-clamp-4" : "text-sm", styleClass)} style={style}>
+                          {layer.content}
+                        </p>
+                      )
                     )}
                     {layer.type === "bullet" && (
                       <div className="flex items-start gap-2 text-muted-foreground">
