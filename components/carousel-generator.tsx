@@ -933,7 +933,7 @@ export function CarouselGenerator(): JSX.Element {
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
                           selectedAction === "export"
-                            ? "bg-accent/20 text-accent"
+                            ? "text-white"
                             : "text-muted-foreground hover:text-white hover:bg-white/5"
                         )}
                       >
@@ -946,7 +946,7 @@ export function CarouselGenerator(): JSX.Element {
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
                           selectedAction === "template"
-                            ? "bg-accent/20 text-accent"
+                            ? "text-white"
                             : "text-muted-foreground hover:text-white hover:bg-white/5"
                         )}
                       >
@@ -961,7 +961,7 @@ export function CarouselGenerator(): JSX.Element {
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
                           selectedAction === "background"
-                            ? "bg-accent/20 text-accent"
+                            ? "text-white"
                             : "text-muted-foreground hover:text-white hover:bg-white/5"
                         )}
                       >
@@ -978,7 +978,7 @@ export function CarouselGenerator(): JSX.Element {
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
                           selectedAction === "text" && selectedLayer
-                            ? "bg-accent/20 text-accent"
+                            ? "text-white"
                             : "text-muted-foreground hover:text-white hover:bg-white/5"
                         )}
                         disabled={!selectedLayer}
@@ -992,7 +992,7 @@ export function CarouselGenerator(): JSX.Element {
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
                           selectedAction === "layout"
-                            ? "bg-accent/20 text-accent"
+                            ? "text-white"
                             : "text-muted-foreground hover:text-white hover:bg-white/5"
                         )}
                       >
@@ -1005,7 +1005,7 @@ export function CarouselGenerator(): JSX.Element {
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
                           selectedAction === "size"
-                            ? "bg-accent/20 text-accent"
+                            ? "text-white"
                             : "text-muted-foreground hover:text-white hover:bg-white/5"
                         )}
                       >
@@ -1018,7 +1018,7 @@ export function CarouselGenerator(): JSX.Element {
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
                           selectedAction === "info"
-                            ? "bg-accent/20 text-accent"
+                            ? "text-white"
                             : "text-muted-foreground hover:text-white hover:bg-white/5"
                         )}
                       >
