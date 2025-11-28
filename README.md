@@ -3,6 +3,11 @@
 Cropdot is a Next.js 16 application that uses AI to create ready-to-publish social media carousels. It combines an AI-driven generator with granular design controls—including templates, typography, layout, and background customization—so you can go from idea to exportable carousel in minutes.
 
 ## Features
+
+### Linear API Integration
+- **Automated Issue Creation**: Create Linear issues programmatically from the application
+- **CRO Team Integration**: Pre-configured for the CRO (Cropdot) team in Linear
+- See [Linear Automation Documentation](./docs/linear-automation.md) for details
 - **AI carousel generation**: Generate multi-slide carousels tailored to your topic, platform, and tone.
 - **Template system**: Start from curated templates and adjust slide-level patterns, colors, and layouts.
 - **Text styling**: Edit headings, body copy, and bullet layers with per-layer visibility controls.
