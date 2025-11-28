@@ -94,8 +94,8 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           status: response.status,
           statusText: response.statusText,
           body: errorText,
-          topic,
-          platform,
+          topic: data.topic,
+          platform: data.platform,
         })
         let friendlyMessage = "We couldn't generate your carousel right now. Please try again in a moment."
         try {
@@ -321,8 +321,9 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
             animation: "gradientFlow 3s linear infinite",
           }}
           aria-label="Generate carousel with AI"
+          disabled={isLoading}
         >
-          Generate with AI
+          {isLoading ? "Generating..." : "Generate with AI"}
       </button>
       </div>
 

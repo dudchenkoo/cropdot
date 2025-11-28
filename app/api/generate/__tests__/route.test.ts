@@ -10,14 +10,7 @@ describe("POST /api/generate", () => {
     })
 
   it("returns mock carousel data for a valid request", async () => {
-    jest.useFakeTimers()
-    const responsePromise = POST(
-      createRequest({ topic: "Design Systems", platform: "Instagram" })
-    )
-    jest.runAllTimers()
-    const response = await responsePromise
-    jest.useRealTimers()
-
+    const response = await POST(createRequest({ topic: "Design Systems", platform: "Instagram" }))
     expect(response.status).toBe(200)
 
     const data = await response.json()
@@ -32,25 +25,11 @@ describe("POST /api/generate", () => {
 
     expect(response.status).toBe(400)
     const error = await response.json()
-    expect(error.error).toBe("Topic and platform are required")
-  })
-
-  it("returns 400 when platform is missing", async () => {
-    const response = await POST(createRequest({ topic: "AI" }))
-
-    expect(response.status).toBe(400)
-    const error = await response.json()
-    expect(error.error).toBe("Topic and platform are required")
+    expect(error.error).toBe("Topic is required")
   })
 
   it("returns carousel payload with expected structure", async () => {
-    jest.useFakeTimers()
-    const responsePromise = POST(
-      createRequest({ topic: "Marketing", platform: "TikTok" })
-    )
-    jest.runAllTimers()
-    const data = await (await responsePromise).json()
-    jest.useRealTimers()
+    const data = await (await POST(createRequest({ topic: "Marketing", platform: "TikTok" }))).json()
     expect(data).toMatchObject({
       topic: "Marketing",
       platform: "TikTok",

@@ -194,8 +194,10 @@ export async function POST(request: Request) {
     console.log("Returning mock carousel data")
     const mockData = generateMockCarousel(topic, platform)
     
-    // Simulate a small delay to mimic API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // Simulate a small delay to mimic API call (skip in tests for speed)
+    if (process.env.NODE_ENV !== "test") {
+      await new Promise(resolve => setTimeout(resolve, 1500))
+    }
     
     return new Response(JSON.stringify(mockData), {
       status: 200,

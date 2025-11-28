@@ -16,7 +16,7 @@ interface SlideCardProps {
 }
 
 // Helper function to parse and render text with ==highlight== markers
-function renderTextWithHighlights(text: string, highlightColor: string | undefined, defaultHighlightColor: string, className: string, style: React.CSSProperties): React.ReactNode {
+export function renderTextWithHighlights(text: string, highlightColor: string | undefined, defaultHighlightColor: string, className: string, style: React.CSSProperties): React.ReactNode {
   if (!text.includes('==')) {
     return <span className={className} style={style}>{text}</span>
   }

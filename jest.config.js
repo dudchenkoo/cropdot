@@ -10,6 +10,7 @@ const customJestConfig = {
     "^@/(.*)$": "<rootDir>/$1",
   },
   testEnvironment: "jest-environment-jsdom",
+  coverageReporters: ["json", "lcov", "text", "clover"],
   collectCoverageFrom: [
     "<rootDir>/app/**/*.{ts,tsx}",
     "<rootDir>/components/**/*.{ts,tsx}",
