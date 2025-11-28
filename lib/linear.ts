@@ -8,6 +8,7 @@ interface LinearIssueCreateInput {
   title: string
   description?: string
   teamId: string
+  assigneeId?: string
 }
 
 interface LinearIssue {
@@ -37,6 +38,7 @@ interface LinearIssueCreateResponse {
  * @param title - The title of the issue
  * @param description - Optional description of the issue
  * @param teamId - The ID of the team in Linear
+ * @param assigneeId - Optional ID of the user to assign the issue to
  * @returns Promise with the created issue data or error
  * 
  * @example
@@ -44,14 +46,16 @@ interface LinearIssueCreateResponse {
  * const result = await createLinearIssue(
  *   "Fix bug in carousel generator",
  *   "The carousel preview is not showing correctly on mobile devices",
- *   "team-id-from-linear"
+ *   "team-id-from-linear",
+ *   "user-id-from-linear" // Optional: assign to specific user
  * )
  * ```
  */
 export async function createLinearIssue(
   title: string,
   description: string | undefined,
-  teamId: string
+  teamId: string,
+  assigneeId?: string
 ): Promise<LinearIssueCreateResponse> {
   const query = `
     mutation IssueCreate($input: IssueCreateInput!) {
@@ -85,8 +89,71 @@ export async function createLinearIssue(
           title,
           description,
           teamId,
+          ...(assigneeId && { assigneeId }),
         },
       },
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Linear API request failed: ${response.status} ${response.statusText}`)
+  }
+
+  return response.json()
+}
+
+interface LinearUser {
+  id: string
+  name: string
+  email: string
+}
+
+interface LinearViewerResponse {
+  data?: {
+    viewer: LinearUser
+  }
+  errors?: Array<{
+    message: string
+  }>
+}
+
+/**
+ * Gets the current authenticated user (viewer) from Linear
+ * Useful for auto-assigning issues to yourself
+ * 
+ * @returns Promise with current user data
+ * 
+ * @example
+ * ```ts
+ * const viewer = await getLinearViewer()
+ * const myUserId = viewer.data?.viewer.id
+ * ```
+ */
+export async function getLinearViewer(): Promise<LinearViewerResponse> {
+  const query = `
+    query {
+      viewer {
+        id
+        name
+        email
+      }
+    }
+  `
+
+  const apiKey = process.env.LINEAR_API_KEY
+
+  if (!apiKey) {
+    throw new Error("LINEAR_API_KEY environment variable is not set")
+  }
+
+  const response = await fetch("https://api.linear.app/graphql", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: apiKey,
+    },
+    body: JSON.stringify({
+      query,
     }),
   })
 

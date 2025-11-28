@@ -11,7 +11,7 @@ import { resolve } from "path"
 // Load environment variables from .env.local
 config({ path: resolve(process.cwd(), ".env.local") })
 
-import { createLinearIssue, getLinearTeams } from "./lib/linear"
+import { createLinearIssue, getLinearTeams, getLinearViewer } from "./lib/linear"
 
 async function testLinearIssue() {
   try {
@@ -47,6 +47,19 @@ async function testLinearIssue() {
     
     console.log(`\n✅ Found CRO team: ${croTeam.name} (Key: ${croTeam.key}, UUID: ${croTeam.id})`)
     
+    // Get current user for auto-assignment
+    console.log("\n👤 Getting current user for auto-assignment...")
+    const viewerResponse = await getLinearViewer()
+    
+    let assigneeId: string | undefined
+    if (!viewerResponse.errors && viewerResponse.data?.viewer) {
+      const viewer = viewerResponse.data.viewer
+      assigneeId = viewer.id
+      console.log(`✅ Will assign to: ${viewer.name} (${viewer.email})`)
+    } else {
+      console.log("⚠️  Could not get current user, issue will be unassigned")
+    }
+    
     // Use the UUID as teamId
     const teamId = croTeam.id
     
@@ -54,7 +67,8 @@ async function testLinearIssue() {
     const result = await createLinearIssue(
       "Test issue from Cursor",
       "This issue was created via Linear API for the CRO team",
-      teamId
+      teamId,
+      assigneeId // Auto-assign to current user if available
     )
     
     if (result.errors) {

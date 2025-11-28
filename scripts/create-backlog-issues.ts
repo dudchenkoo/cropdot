@@ -8,7 +8,7 @@
 import { config } from "dotenv"
 import { resolve } from "path"
 import { readFileSync, readdirSync } from "fs"
-import { createLinearIssue, getLinearTeams } from "../lib/linear"
+import { createLinearIssue, getLinearTeams, getLinearViewer } from "../lib/linear"
 
 // Load environment variables
 config({ path: resolve(process.cwd(), ".env.local") })
@@ -134,6 +134,24 @@ async function createBacklogIssues() {
 
     console.log(`✅ Found CRO team: ${croTeam.name} (UUID: ${croTeam.id})\n`)
 
+    // Get current user for auto-assignment
+    console.log("👤 Getting current user...")
+    const viewerResponse = await getLinearViewer()
+    
+    if (viewerResponse.errors) {
+      console.error("Error fetching viewer:", viewerResponse.errors)
+      return
+    }
+
+    const viewer = viewerResponse.data?.viewer
+    if (!viewer) {
+      console.error("❌ Could not get current user!")
+      return
+    }
+
+    console.log(`✅ Current user: ${viewer.name} (${viewer.email})`)
+    console.log(`   Will auto-assign all issues to: ${viewer.id}\n`)
+
     // Read backlog files
     const backlogDir = resolve(process.cwd(), "docs/backlog")
     const files = readdirSync(backlogDir)
@@ -160,7 +178,8 @@ async function createBacklogIssues() {
       const result = await createLinearIssue(
         title,
         description,
-        croTeam.id
+        croTeam.id,
+        viewer.id // Auto-assign to current user
       )
 
       if (result.errors) {
