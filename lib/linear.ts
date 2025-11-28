@@ -97,3 +97,69 @@ export async function createLinearIssue(
   return response.json()
 }
 
+interface LinearTeam {
+  id: string
+  name: string
+  key: string
+}
+
+interface LinearTeamsResponse {
+  data?: {
+    teams: {
+      nodes: LinearTeam[]
+    }
+  }
+  errors?: Array<{
+    message: string
+  }>
+}
+
+/**
+ * Gets all teams from Linear
+ * Useful for finding teamId by team name
+ * 
+ * @returns Promise with list of teams
+ * 
+ * @example
+ * ```ts
+ * const teams = await getLinearTeams()
+ * const croTeam = teams.data?.teams.nodes.find(team => team.name === "Cropdot")
+ * ```
+ */
+export async function getLinearTeams(): Promise<LinearTeamsResponse> {
+  const query = `
+    query {
+      teams {
+        nodes {
+          id
+          name
+          key
+        }
+      }
+    }
+  `
+
+  const apiKey = process.env.LINEAR_API_KEY
+
+  if (!apiKey) {
+    throw new Error("LINEAR_API_KEY environment variable is not set")
+  }
+
+  const response = await fetch("https://api.linear.app/graphql", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: apiKey,
+    },
+    body: JSON.stringify({
+      query,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Linear API request failed: ${response.status} ${response.statusText}`)
+  }
+
+  return response.json()
+}
+
