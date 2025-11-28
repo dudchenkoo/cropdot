@@ -3,14 +3,13 @@
 import { ArrowRight, Sparkles, ShieldCheck } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { authenticate } from "@/lib/auth"
+import { signIn } from "next-auth/react"
 
 export function LandingHero() {
   const router = useRouter()
 
   const handleContinue = () => {
-    authenticate("you@google.com")
-    router.push("/dashboard")
+    signIn("google", { callbackUrl: "/dashboard" })
   }
 
   return (

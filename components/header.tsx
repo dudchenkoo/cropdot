@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Coins, User, Moon, Sun, CreditCard, MessageCircle, LogOut, Check, Menu } from "lucide-react"
 import { useTheme } from "next-themes"
@@ -18,6 +18,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getAvatarUrl, getUserEmail } from "@/lib/avatar"
+import { signIn, signOut, useSession } from "next-auth/react"
 
 interface HeaderProps {
   subtitle?: string
@@ -45,9 +46,14 @@ export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderP
   const userEmail = getUserEmail(session)
   const authed = !!session
 
-  const handleLogout = () => {
-    // TODO: Implement logout logic
-    console.log("Logout clicked")
+  const handleLogout = async () => {
+    try {
+      window.localStorage.removeItem("cropdot-coins")
+      window.localStorage.removeItem("carousel-generator-saves")
+      await signOut({ callbackUrl: "/" })
+    } catch (error) {
+      console.error("Error during sign out", error)
+    }
   }
 
   return (

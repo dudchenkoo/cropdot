@@ -6,22 +6,19 @@ import { CarouselGenerator } from "@/components/carousel-generator"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Header } from "@/components/header"
 import { PageBackground } from "@/components/page-background"
-import { isAuthenticated } from "@/lib/auth"
+import { useSession } from "next-auth/react"
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [authed, setAuthed] = useState<boolean | null>(null)
+  const { data: session, status } = useSession()
 
   useEffect(() => {
-    const authenticated = isAuthenticated()
-    setAuthed(authenticated)
-
-    if (!authenticated) {
+    if (status === "unauthenticated") {
       router.replace("/")
     }
-  }, [router])
+  }, [status, router])
 
-  if (!authed) {
+  if (status === "loading" || !session) {
     return null
   }
 

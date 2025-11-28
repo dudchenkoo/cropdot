@@ -1,22 +1,19 @@
 import { NextResponse } from "next/server"
-import { withAuth } from "next-auth/middleware"
+import type { NextRequest } from "next/server"
+import { getToken } from "next-auth/jwt"
 
-export default withAuth(
-  function middleware(req) {
-    const token = req.nextauth.token
+export async function middleware(req: NextRequest) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
 
+  // Protect dashboard and create routes
+  if (req.nextUrl.pathname.startsWith("/dashboard") || req.nextUrl.pathname.startsWith("/create")) {
     if (!token) {
       return NextResponse.redirect(new URL("/", req.url))
     }
+  }
 
-    return NextResponse.next()
-  },
-  {
-    callbacks: {
-      authorized: ({ token }) => !!token,
-    },
-  },
-)
+  return NextResponse.next()
+}
 
 export const config = {
   matcher: ["/dashboard/:path*", "/create/:path*"],
