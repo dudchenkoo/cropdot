@@ -12,41 +12,14 @@ async function testLinearIssue() {
     console.log("Testing Linear API...")
     console.log("LINEAR_API_KEY:", process.env.LINEAR_API_KEY ? "✓ Set" : "✗ Missing")
     
-    // First, get all teams to find the CRO team
-    console.log("\n📋 Fetching teams...")
-    const teamsResponse = await getLinearTeams()
+    // Use CRO team ID directly (cro is the teamId)
+    const teamId = process.env.LINEAR_TEAM_ID || "cro"
     
-    if (teamsResponse.errors) {
-      console.error("Error fetching teams:", teamsResponse.errors)
-      return
-    }
-    
-    const teams = teamsResponse.data?.teams.nodes || []
-    console.log(`Found ${teams.length} team(s):`)
-    teams.forEach(team => {
-      console.log(`  - ${team.name} (${team.key}): ${team.id}`)
-    })
-    
-    // Find CRO team (Cropdot)
-    const croTeam = teams.find(team => 
-      team.name.toLowerCase().includes("cropdot") || 
-      team.key.toLowerCase() === "cro"
-    )
-    
-    if (!croTeam) {
-      console.error("\n❌ CRO team (Cropdot) not found!")
-      console.log("Available teams:", teams.map(t => t.name).join(", "))
-      return
-    }
-    
-    console.log(`\n✅ Found CRO team: ${croTeam.name} (ID: ${croTeam.id})`)
-    
-    // Create test issue in CRO team
-    console.log("\n📝 Creating test issue...")
+    console.log(`\n📝 Creating test issue in CRO team (ID: ${teamId})...`)
     const result = await createLinearIssue(
       "Test issue from Cursor",
       "This issue was created via Linear API for the CRO team",
-      croTeam.id
+      teamId
     )
     
     if (result.errors) {
