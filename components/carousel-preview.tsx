@@ -113,8 +113,8 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
       </div>
 
       {viewMode === "single" ? (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
-          <div className="flex flex-col items-center gap-6">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] px-4">
+          <div className="flex flex-col items-center gap-6 w-full max-w-6xl">
             {/* Action buttons at the top */}
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-background/95 backdrop-blur-sm">
@@ -123,7 +123,7 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
             <Button
                       variant="ghost"
               size="icon"
-                      className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
+                      className="h-10 w-10 sm:h-8 sm:w-8 hover:bg-accent hover:scale-105 transition-all"
               onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
               disabled={currentSlide === 0}
             >
@@ -139,7 +139,7 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
             <Button
                       variant="ghost"
               size="icon"
-                      className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
+                      className="h-10 w-10 sm:h-8 sm:w-8 hover:bg-accent hover:scale-105 transition-all"
               onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
               disabled={currentSlide === slides.length - 1}
             >
@@ -186,11 +186,11 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
                 )}
               </div>
             </div>
-            <div className="flex items-center justify-center gap-3 relative max-w-5xl mx-auto">
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-3 relative max-w-5xl w-full mx-auto">
             {/* Previous Slide - left side */}
             {currentSlide > 0 ? (
-              <div className="relative opacity-40 pointer-events-none">
-                <SlideCard 
+              <div className="relative opacity-40 pointer-events-none hidden md:block">
+                <SlideCard
                   slide={slides[currentSlide - 1]} 
                   index={currentSlide - 1} 
                   total={slides.length}
@@ -200,7 +200,7 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
                 />
               </div>
             ) : (
-              <div className="w-80" />
+              <div className="hidden md:block w-80" />
             )}
 
             {/* Add Slide Button - between previous and current */}
@@ -251,8 +251,8 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
 
             {/* Next Slide - right side */}
             {currentSlide < slides.length - 1 ? (
-              <div className="relative opacity-40 pointer-events-none">
-                <SlideCard 
+              <div className="relative opacity-40 pointer-events-none hidden md:block">
+                <SlideCard
                   slide={slides[currentSlide + 1]} 
                   index={currentSlide + 1} 
                   total={slides.length}
@@ -262,7 +262,7 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
                 />
               </div>
             ) : (
-              <div className="w-80" />
+              <div className="hidden md:block w-80" />
             )}
             </div>
 
@@ -342,7 +342,7 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
         </div>
       ) : (
         <div className="pt-12">
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {slides.map((slide, i) => (
             <div
               key={i}
