@@ -1,10 +1,7 @@
 import type { Slide, Layer } from "@/lib/carousel-types"
 import { cn } from "@/lib/utils"
-import { Quote, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Quote } from "lucide-react"
 import type React from "react"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { getBackgroundStyle, getContentFromLayers, getLayerStyles } from "@/lib/helpers"
 
 interface SlideCardProps {
@@ -47,37 +44,6 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
         </div>
       )}
 
-      {onDelete && total > 1 && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete(index)
-                }}
-                className={cn(
-                  "absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity",
-                  "text-destructive hover:text-destructive hover:bg-destructive/10",
-                  compact ? "h-6 w-6" : "h-8 w-8"
-                )}
-              >
-                <Trash2 className={cn(compact ? "w-3 h-3" : "w-4 h-4")} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="flex items-center gap-2">
-                <span className="text-xs">Delete slide</span>
-                <KbdGroup>
-                  <Kbd>Del</Kbd>
-                  <span className="text-[10px] text-muted-foreground">or</span>
-                  <Kbd>Backspace</Kbd>
-                </KbdGroup>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        )}
       <div 
         className={cn(
           "flex-1 flex flex-col",
@@ -259,20 +225,6 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
         )}
       </div>
 
-      {/* Footer - only show if enabled */}
-      {footer?.enabled === true && footer.text ? (
-        <div className="mt-4 pt-3 border-t border-white/10 text-xs text-muted-foreground">
-          {footer.text}
-        </div>
-      ) : !footer && !compact ? (
-        // Show default slide info only if footer doesn't exist at all
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-          <span className="text-xs text-muted-foreground uppercase tracking-wider">{slide.type}</span>
-          <span className="text-xs text-muted-foreground">
-            {index + 1}/{total}
-          </span>
-        </div>
-      ) : null}
     </div>
   )
 }

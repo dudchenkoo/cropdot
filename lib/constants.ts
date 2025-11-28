@@ -21,14 +21,7 @@ export const LAYER_CONTENT_DEFAULTS = {
   slideHeading: "New slide",
 } as const
 
-export const PLATFORM_OPTIONS: { value: Platform; label: string; color: string }[] = [
-  { value: "linkedin", label: "LinkedIn", color: "#0077B5" },
-  { value: "instagram", label: "Instagram", color: "#E4405F" },
-  { value: "telegram", label: "Telegram", color: "#0088cc" },
-  { value: "threads", label: "Threads", color: "#000000" },
-]
-
-export const DEFAULT_PLATFORM: Platform = PLATFORM_OPTIONS[0].value
+export const DEFAULT_PLATFORM: Platform = "linkedin"
 
 export const TONE_OPTIONS: { value: string; label: string }[] = [
   { value: "professional", label: "Professional" },

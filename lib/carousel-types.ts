@@ -4,8 +4,7 @@ export type LayerType = (typeof layerTypes)[number]
 export const slideTypes = ["title", "text", "list", "quote", "cta"] as const
 export type SlideType = (typeof slideTypes)[number]
 
-export const platforms = ["linkedin", "instagram", "telegram", "threads"] as const
-export type Platform = (typeof platforms)[number]
+export type Platform = "linkedin"
 
 export const backgroundTypes = ["color", "photo"] as const
 export type BackgroundType = (typeof backgroundTypes)[number]
@@ -184,7 +183,7 @@ const isHeaderFooter = (value: unknown): value is { enabled: boolean; text: stri
 export const isCarouselData = (value: unknown): value is CarouselData =>
   isRecord(value) &&
   typeof value.topic === "string" &&
-  platforms.includes(value.platform as Platform) &&
+  value.platform === "linkedin" &&
   typeof value.summary === "string" &&
   Array.isArray(value.slides) &&
   value.slides.every(isSlide) &&

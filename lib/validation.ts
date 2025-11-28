@@ -6,10 +6,7 @@ export const carouselFormSchema = z.object({
     .trim()
     .min(3, "Topic must be at least 3 characters.")
     .max(200, "Topic cannot exceed 200 characters."),
-  platform: z.enum(["linkedin", "instagram", "telegram", "threads"], {
-    required_error: "Platform is required.",
-    invalid_type_error: "Platform is required.",
-  }),
+  platform: z.literal("linkedin").default("linkedin"),
   goal: z
     .string()
     .trim()

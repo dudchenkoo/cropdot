@@ -1,19 +1,19 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { toast } from "sonner"
 
-import type { CarouselData, Platform } from "@/lib/carousel-types"
+import type { CarouselData } from "@/lib/carousel-types"
 import { isCarouselData } from "@/lib/carousel-types"
 import {
   DEFAULT_PLATFORM,
   DEFAULT_TONE,
-  PLATFORM_OPTIONS,
   TONE_OPTIONS,
 } from "@/lib/constants"
 import { carouselFormSchema, type CarouselFormValues } from "@/lib/validation"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, Check } from "lucide-react"
+import { Check } from "lucide-react"
 import { useForm } from "react-hook-form"
 
 /**
@@ -56,13 +56,21 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
       topic: "",
       platform: DEFAULT_PLATFORM,
       goal: "",
-      tone: DEFAULT_TONE,
+      tone: undefined,
     },
   })
 
-  const selectedPlatform = watch("platform")
   const selectedTone = watch("tone")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  // Auto-focus topic input when form is shown
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const input = document.getElementById("carousel-topic") as HTMLInputElement
+      input?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   /**
    * Submits the generation request to `/api/generate`, gracefully handling
@@ -97,6 +105,9 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           if (errorText) friendlyMessage = errorText
         }
         setErrorMessage(friendlyMessage)
+        toast.error("Generation failed", {
+          description: friendlyMessage,
+        })
         return
       }
 
@@ -105,14 +116,25 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         const data: unknown = await response.json()
         if (!isCarouselData(data)) {
           console.error("Invalid carousel payload from API", { data })
-          setErrorMessage("We couldn't build slides from that request. Please try again with a bit more detail.")
+          const errorMsg = "We couldn't build slides from that request. Please try again with a bit more detail."
+          setErrorMessage(errorMsg)
+          toast.error("Generation failed", {
+            description: errorMsg,
+          })
           return
         }
         if (!data || !Array.isArray(data.slides) || data.slides.length === 0) {
           console.error("Empty carousel payload from API", { data })
-          setErrorMessage("We couldn't build slides from that request. Please try again with a bit more detail.")
+          const errorMsg = "We couldn't build slides from that request. Please try again with a bit more detail."
+          setErrorMessage(errorMsg)
+          toast.error("Generation failed", {
+            description: errorMsg,
+          })
           return
         }
+        toast.success("LinkedIn post created", {
+          description: `Successfully generated ${data.slides.length} slide${data.slides.length > 1 ? 's' : ''} for your LinkedIn content.`,
+        })
         onGenerate(data)
       } else {
         const reader = response.body?.getReader()
@@ -140,22 +162,41 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
             const data: unknown = JSON.parse(jsonMatch[0])
             if (!isCarouselData(data)) {
               console.error("Invalid carousel data from streaming response", { data })
-              setErrorMessage("We couldn't create slides from the response. Please try again.")
+              const errorMsg = "We couldn't create slides from the response. Please try again."
+              setErrorMessage(errorMsg)
+              toast.error("Generation failed", {
+                description: errorMsg,
+              })
               return
             }
             if (!data || !Array.isArray(data.slides) || data.slides.length === 0) {
               console.error("Streaming response did not include slides", { data })
-              setErrorMessage("We couldn't create slides from the response. Please try again.")
+              const errorMsg = "We couldn't create slides from the response. Please try again."
+              setErrorMessage(errorMsg)
+              toast.error("Generation failed", {
+                description: errorMsg,
+              })
               return
             }
+            toast.success("LinkedIn post created", {
+              description: `Successfully generated ${data.slides.length} slide${data.slides.length > 1 ? 's' : ''} for your LinkedIn content.`,
+            })
             onGenerate(data)
           } catch (parseError) {
             console.error("JSON Parse Error:", { error: parseError, fullText })
-            setErrorMessage("We couldn't read the carousel response. Please try again.")
+            const errorMsg = "We couldn't read the carousel response. Please try again."
+            setErrorMessage(errorMsg)
+            toast.error("Generation failed", {
+              description: errorMsg,
+            })
           }
         } else {
           console.error("No JSON found in response. Full text:", fullText)
-          setErrorMessage("We couldn't parse the response from the server. Please try again in a moment.")
+          const errorMsg = "We couldn't parse the response from the server. Please try again in a moment."
+          setErrorMessage(errorMsg)
+          toast.error("Generation failed", {
+            description: errorMsg,
+          })
         }
       }
     } catch (error) {
@@ -165,14 +206,23 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           ? error.message
           : "We couldn't generate your carousel right now. Please check your connection and try again."
       setErrorMessage(fallbackMessage)
+      toast.error("Generation failed", {
+        description: fallbackMessage,
+      })
     } finally {
       setIsLoading(false)
     }
   })
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3 text-sm" noValidate>
-      <div className="space-y-1">
+    <form onSubmit={onSubmit} className="space-y-5 text-sm" noValidate>
+      <style jsx>{`
+        @keyframes gradientFlow {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
+        }
+      `}</style>
+      <div className="space-y-2">
         <label className="text-xs text-muted-foreground" htmlFor="carousel-topic">Topic</label>
         <p id="carousel-topic-description" className="sr-only">
           Enter the main subject you want the carousel to cover.
@@ -193,7 +243,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         )}
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-2">
         <label className="text-xs text-muted-foreground" htmlFor="carousel-goal">Goal</label>
         <p id="carousel-goal-description" className="sr-only">
           Describe the outcome you want readers to achieve after viewing the carousel.
@@ -212,51 +262,9 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         )}
       </div>
 
-      <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">Platform</label>
-        <div className="grid grid-cols-2 gap-2">
-          {PLATFORM_OPTIONS.map((p) => {
-            const isSelected = selectedPlatform === p.value
-            return (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => setValue("platform", p.value, { shouldValidate: true })}
-                className={`
-                  relative flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all cursor-pointer
-                  ${isSelected
-                    ? "border-white/30 bg-white/10 shadow-lg shadow-black/20" 
-                    : "border-border bg-background hover:border-white/20 hover:bg-white/5"
-                  }
-                `}
-                style={isSelected ? { borderColor: `${p.color}80` } : {}}
-                aria-label={`Select ${p.label} as platform`}
-                aria-pressed={isSelected}
-              >
-                <span className={`text-sm font-medium ${isSelected ? "text-white" : "text-muted-foreground"}`}>
-                  {p.label}
-                </span>
-                {isSelected && (
-                  <>
-                    <Check className="w-4 h-4 flex-shrink-0" style={{ color: p.color }} />
-                    <div 
-                      className="absolute inset-0 rounded-lg opacity-10 pointer-events-none"
-                      style={{ backgroundColor: p.color }}
-                    />
-                  </>
-                )}
-              </button>
-            )
-          })}
-        </div>
-        {errors.platform && (
-          <p className="text-xs text-destructive">{errors.platform.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-1">
+      <div className="space-y-2">
         <label className="text-xs text-muted-foreground">Tone</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-wrap gap-2">
           {TONE_OPTIONS.map((t) => {
             const isSelected = selectedTone === t.value
             return (
@@ -265,21 +273,19 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
                 type="button"
                 onClick={() => setValue("tone", t.value, { shouldValidate: true })}
                 className={`
-                  relative flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all cursor-pointer
+                  relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer
                   ${isSelected
-                    ? "border-white/30 bg-white/10 shadow-lg shadow-black/20" 
-                    : "border-border bg-background hover:border-white/20 hover:bg-white/5"
+                    ? "bg-primary text-primary-foreground border border-primary shadow-sm" 
+                    : "bg-secondary text-muted-foreground border border-border hover:bg-secondary/80 hover:text-foreground"
                   }
                 `}
                 aria-label={`Use a ${t.label.toLowerCase()} tone`}
                 aria-pressed={isSelected}
               >
-                <span className={`text-sm font-medium ${isSelected ? "text-white" : "text-muted-foreground"}`}>
-                  {t.label}
-                </span>
                 {isSelected && (
-                  <Check className="w-4 h-4 flex-shrink-0 text-white" />
+                  <Check className="w-3.5 h-3.5 flex-shrink-0" />
                 )}
+                <span>{t.label}</span>
               </button>
             )
           })}
@@ -295,24 +301,33 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         </div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isLoading || !watch("topic")?.trim()}
-        className="mt-1 w-full rounded-lg bg-[#e8e4df] py-2 text-sm font-medium text-[#1a1a1a] hover:bg-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        aria-label="Generate carousel with AI"
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Generating...
-          </>
-        ) : (
-          "Generate with AI"
-        )}
-      </button>
+      <div className="relative group mt-1">
+        {/* Glow effect */}
+        <div
+          className="absolute -inset-[3px] rounded-xl opacity-50 blur-md group-hover:opacity-75 transition-opacity"
+          style={{
+            background: "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6)",
+            backgroundSize: "300% 100%",
+            animation: "gradientFlow 3s linear infinite",
+          }}
+        />
+        {/* Button */}
+        <button
+          type="submit"
+          className="relative w-full px-6 py-2.5 rounded-lg text-white text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
+          style={{
+            background: "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6)",
+            backgroundSize: "300% 100%",
+            animation: "gradientFlow 3s linear infinite",
+          }}
+          aria-label="Generate carousel with AI"
+        >
+          Generate with AI
+        </button>
+      </div>
 
       <p className="text-xs leading-relaxed text-muted-foreground">
-        AI will generate 8–10 slides optimized for your selected platform. You can edit the text manually after.
+        Our LinkedIn-focused AI creates high-performing content in seconds. Specialized for maximum engagement and results.
       </p>
     </form>
   )

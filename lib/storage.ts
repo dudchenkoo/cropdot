@@ -61,3 +61,18 @@ export const saveCarousel = (data: CarouselData): StoredCarousel => {
     throw new Error("Unable to save carousel data.")
   }
 }
+
+export const deleteCarousel = (id: string): void => {
+  if (typeof window === "undefined") {
+    throw new Error("Local storage is not available in this environment.")
+  }
+
+  const existing = getStoredCarousels()
+  const filtered = existing.filter((item) => item.id !== id)
+
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered))
+  } catch (error) {
+    throw new Error("Unable to delete carousel data.")
+  }
+}

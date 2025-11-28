@@ -180,11 +180,11 @@ function generateMockCarousel(topic: string, platform: string) {
  */
 export async function POST(request: Request) {
   try {
-    const { topic, platform } = await request.json()
+    const { topic, platform = "linkedin" } = await request.json()
     console.log("API Request received:", { topic, platform })
 
-    if (!topic || !platform) {
-      return new Response(JSON.stringify({ error: "Topic and platform are required" }), {
+    if (!topic) {
+      return new Response(JSON.stringify({ error: "Topic is required" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       })

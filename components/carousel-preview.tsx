@@ -4,6 +4,12 @@ import { useState } from "react"
 import type { CarouselData } from "@/lib/carousel-types"
 import { SlideCard } from "./slide-card"
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Layers, Square, Grid3x3, Plus, ChevronLeft, ChevronRight, Copy, Trash2, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, Shuffle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -57,9 +63,9 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
         <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4">
           <Layers className="w-10 h-10 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-medium text-foreground mb-2">No carousel yet</h3>
+        <h3 className="text-lg font-medium text-foreground mb-2">No LinkedIn post yet</h3>
         <p className="text-muted-foreground max-w-sm">
-          Enter a topic and select a platform to generate your carousel content
+          Enter a topic to create high-performing LinkedIn content in just a couple clicks
         </p>
       </div>
     )
@@ -68,30 +74,43 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
   const slides = data.slides || []
 
   return (
-    <div className="relative">
-      {/* Controls in top right corner */}
-      <div className="absolute top-0 right-0 z-20 flex items-center gap-2">
-        <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-background/95 backdrop-blur-sm">
-          <Button
-            variant={viewMode === "single" ? "secondary" : "ghost"}
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setViewMode("single")}
-            title="Single view"
-          >
-            <Square className="w-4 h-4" />
-          </Button>
-          <Button 
-            variant={viewMode === "grid" ? "secondary" : "ghost"} 
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setViewMode("grid")}
-            title="Grid view"
-          >
-            <Grid3x3 className="w-4 h-4" />
-          </Button>
+    <TooltipProvider delayDuration={300} skipDelayDuration={0}>
+      <div className="relative">
+        {/* Controls in top right corner */}
+        <div className="absolute top-0 right-0 z-20 flex items-center gap-2">
+          <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-background/95 backdrop-blur-sm">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={viewMode === "single" ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
+                  onClick={() => setViewMode("single")}
+                >
+                  <Square className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Single view</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant={viewMode === "grid" ? "secondary" : "ghost"} 
+                  size="icon"
+                  className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
+                  onClick={() => setViewMode("grid")}
+                >
+                  <Grid3x3 className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Grid view</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
-      </div>
 
       {viewMode === "single" ? (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
@@ -99,47 +118,71 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
             {/* Action buttons at the top */}
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-background/95 backdrop-blur-sm">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
-                  disabled={currentSlide === 0}
-                  title="Previous slide"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
-                  disabled={currentSlide === slides.length - 1}
-                  title="Next slide"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
+                      onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
+                      disabled={currentSlide === 0}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Previous slide</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
+                      onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
+                      disabled={currentSlide === slides.length - 1}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Next slide</p>
+                  </TooltipContent>
+                </Tooltip>
                 {onDuplicateSlide && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onDuplicateSlide(currentSlide)}
-                    title="Duplicate slide"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
+                        onClick={() => onDuplicateSlide(currentSlide)}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Duplicate slide</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
                 {onDeleteSlide && slides.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => onDeleteSlide(currentSlide)}
-                    title="Delete slide"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 hover:scale-105 transition-all"
+                        onClick={() => onDeleteSlide(currentSlide)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Delete slide</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             </div>
@@ -162,13 +205,19 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
 
             {/* Add Slide Button - between previous and current */}
             {onAddSlide && currentSlide > 0 && (
-              <button
-                onClick={() => onAddSlide(currentSlide - 1)}
-                className="flex-shrink-0 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-border flex items-center justify-center transition-all hover:scale-110 cursor-pointer z-10"
-                title="Add slide"
-              >
-                <Plus className="w-4 h-4 text-white" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onAddSlide(currentSlide - 1)}
+                    className="flex-shrink-0 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-border flex items-center justify-center transition-all hover:scale-110 cursor-pointer z-10"
+                  >
+                    <Plus className="w-4 h-4 text-white" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add slide</p>
+                </TooltipContent>
+              </Tooltip>
             )}
 
             {/* Current Slide - center */}
@@ -185,13 +234,19 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
 
             {/* Add Slide Button - between current and next */}
             {onAddSlide && (
-              <button
-                onClick={() => onAddSlide(currentSlide)}
-                className="flex-shrink-0 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-border flex items-center justify-center transition-all hover:scale-110 cursor-pointer z-10"
-                title="Add slide"
-              >
-                <Plus className="w-4 h-4 text-white" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onAddSlide(currentSlide)}
+                    className="flex-shrink-0 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-border flex items-center justify-center transition-all hover:scale-110 cursor-pointer z-10"
+                  >
+                    <Plus className="w-4 h-4 text-white" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add slide</p>
+                </TooltipContent>
+              </Tooltip>
             )}
 
             {/* Next Slide - right side */}
@@ -216,53 +271,71 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
               <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-background/95 backdrop-blur-sm">
                 {/* Horizontal Alignment */}
                 {onCycleHorizontalAlign && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onCycleHorizontalAlign(currentSlide)}
-                    title="Horizontal alignment"
-                  >
-                    {(() => {
-                      const currentAlign = slides[currentSlide]?.layout?.horizontalAlign || "left"
-                      if (currentAlign === "left") return <AlignLeft className="w-4 h-4" />
-                      if (currentAlign === "center") return <AlignCenter className="w-4 h-4" />
-                      return <AlignRight className="w-4 h-4" />
-                    })()}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
+                        onClick={() => onCycleHorizontalAlign(currentSlide)}
+                      >
+                        {(() => {
+                          const currentAlign = slides[currentSlide]?.layout?.horizontalAlign || "left"
+                          if (currentAlign === "left") return <AlignLeft className="w-4 h-4" />
+                          if (currentAlign === "center") return <AlignCenter className="w-4 h-4" />
+                          return <AlignRight className="w-4 h-4" />
+                        })()}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Horizontal alignment</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
 
                 {/* Vertical Alignment */}
                 {onCycleVerticalAlign && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onCycleVerticalAlign(currentSlide)}
-                    title="Vertical alignment"
-                  >
-                    {(() => {
-                      const currentAlign = slides[currentSlide]?.layout?.verticalAlign || "stretch"
-                      if (currentAlign === "top") return <AlignVerticalJustifyStart className="w-4 h-4" />
-                      if (currentAlign === "center") return <AlignVerticalJustifyCenter className="w-4 h-4" />
-                      if (currentAlign === "bottom") return <AlignVerticalJustifyEnd className="w-4 h-4" />
-                      return <AlignVerticalDistributeCenter className="w-4 h-4" />
-                    })()}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
+                        onClick={() => onCycleVerticalAlign(currentSlide)}
+                      >
+                        {(() => {
+                          const currentAlign = slides[currentSlide]?.layout?.verticalAlign || "stretch"
+                          if (currentAlign === "top") return <AlignVerticalJustifyStart className="w-4 h-4" />
+                          if (currentAlign === "center") return <AlignVerticalJustifyCenter className="w-4 h-4" />
+                          if (currentAlign === "bottom") return <AlignVerticalJustifyEnd className="w-4 h-4" />
+                          return <AlignVerticalDistributeCenter className="w-4 h-4" />
+                        })()}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Vertical alignment</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
 
               {/* Random Color Button */}
               {onRandomBackgroundColor && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 border border-border rounded-lg bg-background/95 backdrop-blur-sm"
-                  onClick={() => onRandomBackgroundColor(currentSlide)}
-                  title="Random background color"
-                >
-                  <Shuffle className="w-4 h-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 border border-border rounded-lg bg-background/95 backdrop-blur-sm hover:bg-accent hover:scale-105 hover:border-accent transition-all"
+                      onClick={() => onRandomBackgroundColor(currentSlide)}
+                    >
+                      <Shuffle className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Random background color</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           </div>
@@ -341,6 +414,7 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }
