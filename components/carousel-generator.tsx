@@ -95,9 +95,8 @@ export function CarouselGenerator(): JSX.Element {
   const [savedStatus, setSavedStatus] = useState<string | null>(null)
   const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | "info" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
-  const [exportFormat, setExportFormat] = useState<"pdf" | "png" | "jpg" | "zip">("pdf")
+  const [exportFormat, setExportFormat] = useState<"pdf" | "image">("pdf")
   const [exportScale, setExportScale] = useState<number>(2)
-  const [exportQuality, setExportQuality] = useState<number>(0.92)
   const [exportAllSlides, setExportAllSlides] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
   const actionPanelRef = useRef<HTMLDivElement>(null)
@@ -368,27 +367,21 @@ export function CarouselGenerator(): JSX.Element {
     try {
       if (exportFormat === "pdf") {
         await exportCarouselToPDF(slides, { filenamePrefix, scale: exportScale })
-      } else if (exportFormat === "zip") {
-        await exportAllSlidesToImages(slides, {
-          filenamePrefix,
-          scale: exportScale,
-          quality: exportQuality,
-          format: "png",
-        })
-      } else if (slides.length > 1) {
-        await exportAllSlidesToImages(slides, {
-          filenamePrefix,
-          scale: exportScale,
-          quality: exportQuality,
-          format: exportFormat,
-        })
       } else {
-        await exportSlideToImage(slides[0], {
-          filenamePrefix,
-          scale: exportScale,
-          quality: exportQuality,
-          format: exportFormat,
-        })
+        // Image format (PNG/JPG)
+        if (slides.length > 1) {
+          await exportAllSlidesToImages(slides, {
+            filenamePrefix,
+            scale: exportScale,
+            format: "png",
+          })
+        } else {
+          await exportSlideToImage(slides[0], {
+            filenamePrefix,
+            scale: exportScale,
+            format: "png",
+          })
+        }
       }
 
       toast.success("Export ready!", { id: toastId })
@@ -1854,31 +1847,33 @@ export function CarouselGenerator(): JSX.Element {
                     <div className="p-4 space-y-4">
                       <div className="space-y-2">
                         <label className="text-xs text-muted-foreground block">Export format</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {([
-                            { value: "pdf", label: "PDF", helper: "Multi-page document" },
-                            { value: "png", label: "PNG", helper: "High-quality image" },
-                            { value: "jpg", label: "JPG", helper: "Smaller image" },
-                            { value: "zip", label: "ZIP", helper: "Bundle images" },
-                          ] as const).map((option) => {
-                            const isSelected = exportFormat === option.value
-                            return (
-                              <button
-                                key={option.value}
-                                onClick={() => setExportFormat(option.value)}
-                                className={cn(
-                                  "flex flex-col items-start gap-1 px-3 py-2 rounded-lg border text-left transition-colors",
-                                  isSelected
-                                    ? "border-primary bg-primary/10 text-white"
-                                    : "border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10"
-                                )}
-                                aria-pressed={isSelected}
-                              >
-                                <span className="text-sm font-medium">{option.label}</span>
-                                <span className="text-[11px] text-muted-foreground">{option.helper}</span>
-                              </button>
-                            )
-                          })}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setExportFormat("pdf")}
+                            className={cn(
+                              "flex-1 px-4 py-3 rounded-lg border text-left transition-colors",
+                              exportFormat === "pdf"
+                                ? "border-primary bg-primary/10 text-white"
+                                : "border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10"
+                            )}
+                            aria-pressed={exportFormat === "pdf"}
+                          >
+                            <span className="text-sm font-medium block">PDF</span>
+                            <span className="text-[11px] text-muted-foreground">Multi-page document</span>
+                          </button>
+                          <button
+                            onClick={() => setExportFormat("image")}
+                            className={cn(
+                              "flex-1 px-4 py-3 rounded-lg border text-left transition-colors",
+                              exportFormat === "image"
+                                ? "border-primary bg-primary/10 text-white"
+                                : "border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10"
+                            )}
+                            aria-pressed={exportFormat === "image"}
+                          >
+                            <span className="text-sm font-medium block">PNG/Image</span>
+                            <span className="text-[11px] text-muted-foreground">High-quality image</span>
+                          </button>
                         </div>
                       </div>
 
@@ -1907,24 +1902,6 @@ export function CarouselGenerator(): JSX.Element {
                         <p className="text-[11px] text-muted-foreground">Higher scales create sharper exports for retina screens.</p>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs text-muted-foreground">Image quality</label>
-                          <span className="text-xs text-muted-foreground">{Math.round(exportQuality * 100)}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={70}
-                          max={100}
-                          step={5}
-                          value={Math.round(exportQuality * 100)}
-                          onChange={(event) => setExportQuality(Number(event.target.value) / 100)}
-                          className="w-full accent-white/60"
-                          aria-label="Image export quality"
-                        />
-                        <p className="text-[11px] text-muted-foreground">Quality applies to PNG and JPG exports.</p>
-                      </div>
-
                       <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
                         <div>
                           <label className="text-sm font-medium">Export all slides</label>
@@ -1944,9 +1921,11 @@ export function CarouselGenerator(): JSX.Element {
                       >
                         {isExporting ? "Preparing export..." : `Export ${exportAllSlides ? "all slides" : "current slide"}`}
                       </Button>
-                      <p className="text-[11px] text-muted-foreground text-center">
-                        Images are bundled into a ZIP when exporting multiple slides.
-                      </p>
+                      {exportFormat === "image" && exportAllSlides && (
+                        <p className="text-[11px] text-muted-foreground text-center">
+                          Multiple images will be bundled into a ZIP file.
+                        </p>
+                      )}
                     </div>
                   ) : selectedAction === "size" ? (
                     /* Size Settings View */
