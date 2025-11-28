@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { getAvatarUrl, getUserEmail } from "@/lib/avatar"
+import { signOut, useSession } from "next-auth/react"
 
 interface HeaderProps {
   subtitle?: string
@@ -30,19 +31,24 @@ export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderP
   const displayTopic = topic || subtitle
   const { coins } = useCoins()
   const { theme, setTheme } = useTheme()
-  const [avatarUrl, setAvatarUrl] = useState<string>("")
+  const { data: session } = useSession()
   const [mounted, setMounted] = useState(false)
-  const [userEmail, setUserEmail] = useState<string>("")
 
   useEffect(() => {
     setMounted(true)
-    setAvatarUrl(getAvatarUrl())
-    setUserEmail(getUserEmail())
   }, [])
 
-  const handleLogout = () => {
-    // TODO: Implement logout logic
-    console.log("Logout clicked")
+  const avatarUrl = getAvatarUrl(session)
+  const userEmail = getUserEmail(session)
+
+  const handleLogout = async () => {
+    try {
+      window.localStorage.removeItem("cropdot-coins")
+      window.localStorage.removeItem("carousel-generator-saves")
+      await signOut({ callbackUrl: "/" })
+    } catch (error) {
+      console.error("Error during sign out", error)
+    }
   }
 
   return (
