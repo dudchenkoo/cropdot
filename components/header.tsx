@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
-import { Coins, User, Moon, Sun, CreditCard, MessageCircle, LogOut, Check, LogIn } from "lucide-react"
+import { Coins, User, Moon, Sun, CreditCard, MessageCircle, LogOut, Check } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useCoins } from "@/hooks/use-coins"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -15,9 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { getAvatarUrl, getUserEmail } from "@/lib/avatar"
-import { signIn, signOut, useSession } from "next-auth/react"
 
 interface HeaderProps {
   subtitle?: string
@@ -29,29 +28,24 @@ interface HeaderProps {
 
 export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderProps) {
   const pathname = usePathname()
-  const router = useRouter()
   const displayTopic = topic || subtitle
-  const { coins } = useCoins()
+  const { coins, isAuthenticated } = useCoins()
   const { theme, setTheme } = useTheme()
-  const { data: session } = useSession()
+  const [avatarUrl, setAvatarUrl] = useState<string>("")
   const [mounted, setMounted] = useState(false)
+  const [userEmail, setUserEmail] = useState<string>("")
+
+  const displayedCoins = isAuthenticated ? coins : 0
 
   useEffect(() => {
     setMounted(true)
+    setAvatarUrl(getAvatarUrl())
+    setUserEmail(getUserEmail())
   }, [])
 
-  const avatarUrl = getAvatarUrl(session)
-  const userEmail = getUserEmail(session)
-  const authed = !!session
-
-  const handleLogout = async () => {
-    try {
-      window.localStorage.removeItem("cropdot-coins")
-      window.localStorage.removeItem("carousel-generator-saves")
-      await signOut({ callbackUrl: "/" })
-    } catch (error) {
-      console.error("Error during sign out", error)
-    }
+  const handleLogout = () => {
+    // TODO: Implement logout logic
+    console.log("Logout clicked")
   }
 
   return (
@@ -99,20 +93,10 @@ export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderP
 
         <div className="flex items-center gap-4">
           <nav className="flex items-center gap-6">
-            {authed && (
-              <Link
-                href="/dashboard"
-                className={`text-sm transition-colors cursor-pointer ${
-                  pathname === "/dashboard" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Dashboard
-              </Link>
-            )}
             <Link
               href="/templates"
               className={`text-sm transition-colors cursor-pointer ${
-                pathname?.startsWith("/templates") ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                pathname === "/templates" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Templates
@@ -127,77 +111,74 @@ export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderP
             </Link>
           </nav>
           <div className="h-6 w-px bg-border" />
-          {authed ? (
-            <>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border">
-                <Coins className="w-4 h-4 text-foreground" />
-                <span className="text-sm font-medium text-foreground">{coins}</span>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="rounded-full hover:ring-2 hover:ring-ring hover:ring-offset-2 transition-all cursor-pointer outline-none">
-                    <Avatar className="h-8 w-8">
-                      {avatarUrl && <AvatarImage src={avatarUrl} alt="User avatar" />}
-                      <AvatarFallback className="bg-muted text-muted-foreground">
-                        <User className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">Account</p>
-                      <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                    className="cursor-pointer"
-                  >
-                    {mounted && theme === "dark" ? (
-                      <>
-                        <Sun className="mr-2 h-4 w-4" />
-                        <span>Light Mode</span>
-                      </>
-                    ) : (
-                      <>
-                        <Moon className="mr-2 h-4 w-4" />
-                        <span>Dark Mode</span>
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/billing" className="flex items-center">
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      <span>Billing</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/contact" className="flex items-center">
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      <span>Contact Us</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log Out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          ) : (
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" className="gap-2 text-sm" onClick={() => signIn("google")}>
-                <LogIn className="h-4 w-4" />
-                Continue with Google
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => router.push("/pricing")}>View pricing</Button>
-            </div>
-          )}
+          <TooltipProvider delayDuration={200} skipDelayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border cursor-default">
+                  <Coins className="w-4 h-4 text-foreground" />
+                  <span className="text-sm font-medium text-foreground">{displayedCoins}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent align="end">
+                <p className="text-xs">You have {displayedCoins} coins. Each generation costs 1 coin.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="rounded-full hover:ring-2 hover:ring-ring hover:ring-offset-2 transition-all cursor-pointer outline-none">
+                <Avatar className="h-8 w-8">
+                  {avatarUrl && <AvatarImage src={avatarUrl} alt="User avatar" />}
+                  <AvatarFallback className="bg-muted text-muted-foreground">
+                    <User className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">Account</p>
+                  <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="cursor-pointer"
+              >
+                {mounted && theme === "dark" ? (
+                  <>
+                    <Sun className="mr-2 h-4 w-4" />
+                    <span>Light Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="mr-2 h-4 w-4" />
+                    <span>Dark Mode</span>
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link href="/billing" className="flex items-center">
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  <span>Billing</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link href="/contact" className="flex items-center">
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  <span>Contact Us</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log Out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

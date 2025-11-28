@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import { Inter_Tight } from "next/font/google"
-import dynamic from "next/dynamic"
 import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, ChevronLeft, ChevronRight, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, Undo2, Redo2, X, Shuffle, Info, Bold, Italic, Underline, Strikethrough, ListOrdered, List, Highlighter } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { isCarouselData } from "@/lib/carousel-types"
@@ -34,11 +34,8 @@ import {
 } from "@/lib/constants"
 import { generateLayerId, slideToLayers, getPatternBackground } from "@/lib/helpers"
 import { loadCarousel, saveCarousel, deleteCarousel, type StoredCarousel } from "@/lib/storage"
-import { exportAllSlidesToImages, exportCarouselToPDF, exportSlideToImage } from "@/lib/export"
 import { CarouselForm } from "./carousel-form"
-const CarouselPreview = dynamic(() => import("./carousel-preview").then((mod) => mod.CarouselPreview), {
-  ssr: false,
-})
+import { CarouselPreview } from "./carousel-preview"
 import { SlideCard } from "./slide-card"
 import { Header } from "./header"
 import { ErrorBoundary } from "./error-boundary"
@@ -54,6 +51,7 @@ import {
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { canRedo, canUndo, createHistory, pushState, redo as redoHistory, undo as undoHistory, type HistoryState } from "@/lib/history"
+import { useCoins } from "@/hooks/use-coins"
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -82,25 +80,22 @@ export function CarouselGenerator(): JSX.Element {
   const [isLoading, setIsLoading] = useState(false)
   const [viewMode, setViewMode] = useState<"dashboard" | "creation">("dashboard")
   const [savedCarousels, setSavedCarousels] = useState<StoredCarousel[]>([])
+  const { coins } = useCoins()
   
   // Theme-aware dot pattern: light dots in dark mode, dark dots in light mode
   // Use default dark pattern until mounted to prevent hydration mismatch
-  const dotPatternColor = useMemo(() => {
-    if (!mounted) return `rgba(255, 255, 255, 0.08)`
-    return theme === "dark" ? `rgba(255, 255, 255, 0.08)` : `rgba(0, 0, 0, 0.03)`
-  }, [mounted, theme])
+  const dotPatternColor = mounted && theme === "dark" 
+    ? `rgba(255, 255, 255, 0.08)` 
+    : mounted && theme === "light"
+    ? `rgba(0, 0, 0, 0.03)`
+    : `rgba(255, 255, 255, 0.08)` // Default to dark pattern until mounted
   const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0)
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
   const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null)
   const [savedStatus, setSavedStatus] = useState<string | null>(null)
   const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | "info" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
-  const [exportFormat, setExportFormat] = useState<"pdf" | "image">("pdf")
-  const [exportScale, setExportScale] = useState<number>(2)
-  const [exportAllSlides, setExportAllSlides] = useState(true)
-  const [isExporting, setIsExporting] = useState(false)
   const actionPanelRef = useRef<HTMLDivElement>(null)
-  const exportContainerRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -336,61 +331,6 @@ export function CarouselGenerator(): JSX.Element {
 
   const updateCarouselData = (updatedData: CarouselData, statusMessage?: string): void => {
     commitCarouselChange(updatedData, statusMessage)
-  }
-
-  const getExportableSlides = () => {
-    const exportContainer = exportContainerRef.current
-    if (!exportContainer) return []
-
-    const slides = Array.from(exportContainer.querySelectorAll<HTMLElement>("[data-export-slide-index]"))
-    if (exportAllSlides) return slides
-
-    return slides.filter((slide) => Number(slide.dataset.exportSlideIndex) === selectedSlideIndex)
-  }
-
-  const handleExportCarousel = async () => {
-    if (!carouselData) {
-      toast.error("No carousel to export")
-      return
-    }
-
-    const slides = getExportableSlides()
-    if (!slides.length) {
-      toast.error("No slides available for export")
-      return
-    }
-
-    const filenamePrefix = carouselData.topic?.trim() || "carousel"
-    const toastId = toast.loading("Preparing export...")
-    setIsExporting(true)
-
-    try {
-      if (exportFormat === "pdf") {
-        await exportCarouselToPDF(slides, { filenamePrefix, scale: exportScale })
-      } else {
-        // Image format (PNG/JPG)
-        if (slides.length > 1) {
-          await exportAllSlidesToImages(slides, {
-            filenamePrefix,
-            scale: exportScale,
-            format: "png",
-          })
-        } else {
-          await exportSlideToImage(slides[0], {
-            filenamePrefix,
-            scale: exportScale,
-            format: "png",
-          })
-        }
-      }
-
-      toast.success("Export ready!", { id: toastId })
-    } catch (error) {
-      console.error("Export failed", error)
-      toast.error("Failed to export carousel", { id: toastId })
-    } finally {
-      setIsExporting(false)
-    }
   }
 
 
@@ -841,11 +781,8 @@ export function CarouselGenerator(): JSX.Element {
     setSelectedLayerId(layerId)
   }
 
-  const currentSlide = useMemo(() => carouselData?.slides[selectedSlideIndex], [carouselData, selectedSlideIndex])
-  const selectedLayer = useMemo(
-    () => currentSlide?.layers.find((l) => l.id === selectedLayerId),
-    [currentSlide, selectedLayerId],
-  )
+  const currentSlide = carouselData?.slides[selectedSlideIndex]
+  const selectedLayer = currentSlide?.layers.find((l) => l.id === selectedLayerId)
 
   // Dashboard view - show when viewMode is dashboard
   if (viewMode === "dashboard") {
@@ -855,6 +792,26 @@ export function CarouselGenerator(): JSX.Element {
         <div className={`flex h-screen overflow-hidden ${interTight.variable}`}>
       <div className="flex flex-1 flex-col overflow-hidden">
             <Header subtitle={undefined} onBack={undefined} onLogoClick={() => setViewMode("dashboard")} />
+
+            {coins === 0 && (
+              <div className="border-b border-border bg-amber-50 px-6 py-3 text-amber-900">
+                <div className="max-w-7xl mx-auto flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    <div>
+                      <p className="text-sm font-semibold">You&apos;ve used your free generation!</p>
+                      <p className="text-xs text-amber-800">Upgrade to create more content.</p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/pricing"
+                    className="inline-flex h-9 items-center justify-center rounded-md border border-amber-200 bg-white px-4 text-xs font-semibold text-amber-900 shadow-sm transition-colors hover:bg-amber-100"
+                  >
+                    Go to pricing
+                  </Link>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-1 flex-col overflow-hidden">
             {/* Dashboard Title Section - only show if we have LinkedIn posts */}
@@ -948,13 +905,19 @@ export function CarouselGenerator(): JSX.Element {
                     fontFamily: "var(--font-inter-tight)",
                   }}
                 >
-                    High-performing LinkedIn content
-                  <br />
-                    in just a couple clicks
+                  {coins === 0 ? "You've used your free generation. Get more coins to create content." : (
+                    <>
+                      High-performing LinkedIn content
+                      <br />
+                      in just a couple clicks
+                    </>
+                  )}
                 </h2>
 
                   <p className="text-sm text-muted-foreground text-center max-w-md mb-8">
-                    Our LinkedIn specialization helps you create engaging posts that drive results. Optimized for maximum performance.
+                  {coins === 0
+                      ? "Buy a coin package to keep creating LinkedIn content without interruptions."
+                      : "Our LinkedIn specialization helps you create engaging posts that drive results. Optimized for maximum performance."}
                   </p>
 
                   <div className="relative">
@@ -968,13 +931,22 @@ export function CarouselGenerator(): JSX.Element {
                       }}
                     />
                     {/* Button */}
-                    <button
-                      aria-label="Start generating a carousel"
-                      onClick={handleStartNewGeneration}
-                      className="relative px-6 py-2.5 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
-                    >
-                      Start generating
-                    </button>
+                    {coins === 0 ? (
+                      <Link
+                        href="/pricing"
+                        className="relative inline-flex items-center justify-center px-6 py-2.5 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
+                      >
+                        Buy Coins
+                      </Link>
+                    ) : (
+                      <button
+                        aria-label="Start generating a carousel"
+                        onClick={handleStartNewGeneration}
+                        className="relative px-6 py-2.5 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
+                      >
+                        Start generating
+                      </button>
+                    )}
                   </div>
 
                   {/* Footer */}
@@ -1161,36 +1133,13 @@ export function CarouselGenerator(): JSX.Element {
                       />
                     </ErrorBoundary>
                   </div>
-
-                  {/* Hidden export container to capture high-resolution slides */}
-                  <div
-                    ref={exportContainerRef}
-                    aria-hidden="true"
-                    className="pointer-events-none fixed left-[-9999px] top-0 flex gap-4"
-                  >
-                    {carouselData.slides.map((slide, index) => (
-                      <div
-                        key={`export-slide-${slide.id || index}`}
-                        data-export-slide-index={index}
-                        className="shadow-lg"
-                      >
-                        <SlideCard
-                          slide={slide}
-                          index={index}
-                          total={carouselData.slides.length}
-                          header={carouselData.header}
-                          footer={carouselData.footer}
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Fixed Bottom Action Panel */}
-                  <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur-sm">
-                    <div className="w-full px-4 py-2">
-                      {/* Action buttons */}
-                      <div className="flex items-center justify-between gap-3 flex-wrap max-w-full">
-                        <div className="flex items-center gap-2 flex-wrap">
+                
+                {/* Fixed Bottom Action Panel */}
+                <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur-sm">
+                  <div className="w-full px-4 py-2">
+                    {/* Action buttons */}
+                    <div className="flex items-center justify-between gap-3 flex-wrap max-w-full">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         aria-label="Open template settings"
                         onClick={() => setSelectedAction(selectedAction === "template" ? null : "template")}
@@ -1357,7 +1306,6 @@ export function CarouselGenerator(): JSX.Element {
                        selectedAction === "template" ? "Template" :
                        selectedAction === "layout" ? "Layout" :
                        selectedAction === "size" ? "Size" :
-                       selectedAction === "export" ? "Export" :
                        selectedAction === "info" ? "Info" :
                        "Edit slide"}
                     </span>
@@ -1841,91 +1789,6 @@ export function CarouselGenerator(): JSX.Element {
                           </>
                         )}
                       </div>
-                    </div>
-                  ) : selectedAction === "export" ? (
-                    /* Export View */
-                    <div className="p-4 space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-xs text-muted-foreground block">Export format</label>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setExportFormat("pdf")}
-                            className={cn(
-                              "flex-1 px-4 py-3 rounded-lg border text-left transition-colors",
-                              exportFormat === "pdf"
-                                ? "border-primary bg-primary/10 text-white"
-                                : "border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10"
-                            )}
-                            aria-pressed={exportFormat === "pdf"}
-                          >
-                            <span className="text-sm font-medium block">PDF</span>
-                            <span className="text-[11px] text-muted-foreground">Multi-page document</span>
-                          </button>
-                          <button
-                            onClick={() => setExportFormat("image")}
-                            className={cn(
-                              "flex-1 px-4 py-3 rounded-lg border text-left transition-colors",
-                              exportFormat === "image"
-                                ? "border-primary bg-primary/10 text-white"
-                                : "border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10"
-                            )}
-                            aria-pressed={exportFormat === "image"}
-                          >
-                            <span className="text-sm font-medium block">PNG/Image</span>
-                            <span className="text-[11px] text-muted-foreground">High-quality image</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs text-muted-foreground block">Resolution</label>
-                        <div className="flex items-center gap-2">
-                          {[1, 2, 3].map((scaleOption) => {
-                            const isSelected = exportScale === scaleOption
-                            return (
-                              <button
-                                key={scaleOption}
-                                onClick={() => setExportScale(scaleOption)}
-                                className={cn(
-                                  "flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors",
-                                  isSelected
-                                    ? "border-primary bg-primary/10 text-white"
-                                    : "border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10"
-                                )}
-                                aria-pressed={isSelected}
-                              >
-                                {scaleOption}x
-                              </button>
-                            )
-                          })}
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">Higher scales create sharper exports for retina screens.</p>
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
-                        <div>
-                          <label className="text-sm font-medium">Export all slides</label>
-                          <p className="text-xs text-muted-foreground">Turn off to export only the current slide.</p>
-                        </div>
-                        <Switch
-                          checked={exportAllSlides}
-                          onCheckedChange={setExportAllSlides}
-                          aria-label="Toggle export scope"
-                        />
-                      </div>
-
-                      <Button
-                        className="w-full"
-                        onClick={handleExportCarousel}
-                        disabled={isExporting}
-                      >
-                        {isExporting ? "Preparing export..." : `Export ${exportAllSlides ? "all slides" : "current slide"}`}
-                      </Button>
-                      {exportFormat === "image" && exportAllSlides && (
-                        <p className="text-[11px] text-muted-foreground text-center">
-                          Multiple images will be bundled into a ZIP file.
-                        </p>
-                      )}
                     </div>
                   ) : selectedAction === "size" ? (
                     /* Size Settings View */

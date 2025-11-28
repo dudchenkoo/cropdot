@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import Link from "next/link"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 
@@ -12,9 +13,11 @@ import {
   TONE_OPTIONS,
 } from "@/lib/constants"
 import { carouselFormSchema, type CarouselFormValues } from "@/lib/validation"
+import { subtractCoins } from "@/lib/coins"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Check } from "lucide-react"
 import { useForm } from "react-hook-form"
+import { useCoins } from "@/hooks/use-coins"
 
 /**
  * Props for the carousel generation form.
@@ -44,6 +47,8 @@ interface CarouselFormProps {
  * ```
  */
 export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFormProps) {
+  const { coins, refreshCoins } = useCoins()
+  const hasEnoughCoins = coins >= 1
   const {
     register,
     handleSubmit,
@@ -72,12 +77,34 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
     return () => clearTimeout(timer)
   }, [])
 
+  useEffect(() => {
+    if (hasEnoughCoins && errorMessage?.includes("coin")) {
+      setErrorMessage(null)
+    }
+  }, [errorMessage, hasEnoughCoins])
+
+  const handleSuccessfulGeneration = (data: CarouselData) => {
+    const remainingCoins = subtractCoins(1)
+    refreshCoins()
+    toast.success("Generation complete! 1 coin used.", {
+      description: `${remainingCoins} coin${remainingCoins === 1 ? "" : "s"} remaining.`,
+    })
+    onGenerate(data)
+  }
+
   /**
    * Submits the generation request to `/api/generate`, gracefully handling
-   * JSON and streamed responses, surfacing errors, and toggling loading state
-   * for the parent component.
-   */
+  * JSON and streamed responses, surfacing errors, and toggling loading state
+  * for the parent component.
+  */
   const onSubmit = handleSubmit(async (data) => {
+    if (!hasEnoughCoins) {
+      const insufficientCoinsMessage = "You need 1 coin to generate. Get more coins on the Pricing page."
+      setErrorMessage(insufficientCoinsMessage)
+      toast.error("Insufficient coins", { description: insufficientCoinsMessage })
+      return
+    }
+
     setErrorMessage(null)
     setIsLoading(true)
 
@@ -94,8 +121,8 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           status: response.status,
           statusText: response.statusText,
           body: errorText,
-          topic: data.topic,
-          platform: data.platform,
+          topic,
+          platform,
         })
         let friendlyMessage = "We couldn't generate your carousel right now. Please try again in a moment."
         try {
@@ -107,7 +134,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         setErrorMessage(friendlyMessage)
         toast.error("Generation failed", {
           description: friendlyMessage,
-      })
+        })
         return
       }
 
@@ -132,14 +159,11 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           })
           return
         }
-        toast.success("LinkedIn post created", {
-          description: `Successfully generated ${data.slides.length} slide${data.slides.length > 1 ? 's' : ''} for your LinkedIn content.`,
-        })
-        onGenerate(data)
+        handleSuccessfulGeneration(data)
       } else {
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let fullText = ""
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+        let fullText = ""
 
         if (!reader) {
           setErrorMessage("We received an unexpected response from the server. Please try again.")
@@ -150,14 +174,14 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           const { done, value } = await reader.read()
           if (done) break
           if (value) {
-          fullText += decoder.decode(value, { stream: true })
+            fullText += decoder.decode(value, { stream: true })
+          }
         }
-      }
 
         console.log("Full response text:", fullText.substring(0, 500))
 
-      const jsonMatch = fullText.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
+        const jsonMatch = fullText.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
           try {
             const data: unknown = JSON.parse(jsonMatch[0])
             if (!isCarouselData(data)) {
@@ -178,10 +202,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
               })
               return
             }
-            toast.success("LinkedIn post created", {
-              description: `Successfully generated ${data.slides.length} slide${data.slides.length > 1 ? 's' : ''} for your LinkedIn content.`,
-            })
-        onGenerate(data)
+            handleSuccessfulGeneration(data)
           } catch (parseError) {
             console.error("JSON Parse Error:", { error: parseError, fullText })
             const errorMsg = "We couldn't read the carousel response. Please try again."
@@ -301,6 +322,15 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         </div>
       ) : null}
 
+      {!hasEnoughCoins && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-100/40 px-3 py-2 text-xs text-amber-900">
+          <span>You need 1 coin to generate. Get more coins on the Pricing page.</span>
+          <Link href="/pricing" className="font-medium underline underline-offset-2">
+            Pricing
+          </Link>
+        </div>
+      )}
+
       <div className="relative group mt-1">
         {/* Glow effect */}
         <div
@@ -312,19 +342,19 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           }}
         />
         {/* Button */}
-      <button
-        type="submit"
-          className="relative w-full px-6 py-2.5 rounded-lg text-white text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
+        <button
+          type="submit"
+          disabled={!hasEnoughCoins || isLoading}
+          className="relative w-full px-6 py-2.5 rounded-lg text-white text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
           style={{
             background: "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6)",
             backgroundSize: "300% 100%",
             animation: "gradientFlow 3s linear infinite",
           }}
           aria-label="Generate carousel with AI"
-          disabled={isLoading}
         >
-          {isLoading ? "Generating..." : "Generate with AI"}
-      </button>
+          Generate with AI
+        </button>
       </div>
 
       <p className="text-xs leading-relaxed text-muted-foreground">

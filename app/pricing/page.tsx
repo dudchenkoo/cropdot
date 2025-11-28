@@ -8,51 +8,51 @@ import { PageBackground } from "@/components/page-background"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { addCoins } from "@/lib/coins"
+import { useCoins } from "@/hooks/use-coins"
+import { toast } from "sonner"
 
 const interTight = Inter_Tight({ subsets: ["latin"], variable: "--font-inter-tight" })
 
-const pricingPlans = [
+const coinPackages = [
   {
-    name: "Starter",
+    name: "Starter Pack",
     price: 9,
-    credits: 5,
-    pricePerCredit: 1.8,
+    coins: 10,
+    pricePerCoin: 0.9,
     features: [
-      "5 high-performing LinkedIn posts",
-      "LinkedIn-optimized content",
+      "10 coins for AI generations",
+      "Great for testing your first posts",
       "High-quality slide exports",
-      "AI-powered content writing",
+      "Use coins any time",
     ],
     popular: false,
   },
   {
-    name: "Basic",
+    name: "Growth Pack",
     price: 19,
-    credits: 20,
-    pricePerCredit: 0.95,
-    savings: "47% savings",
+    coins: 30,
+    pricePerCoin: 0.63,
+    savings: "Best value",
     features: [
-      "20 high-performing LinkedIn posts",
-      "LinkedIn carousel posts",
-      "High-quality slide exports",
-      "AI-powered content writing",
+      "30 coins for LinkedIn carousel generations",
+      "LinkedIn-optimized writing",
       "Priority generation queue",
+      "Use coins across multiple projects",
     ],
     popular: true,
   },
   {
-    name: "Pro",
-    price: 29,
-    credits: 50,
-    pricePerCredit: 0.58,
-    savings: "68% savings",
+    name: "Pro Pack",
+    price: 49,
+    coins: 100,
+    pricePerCoin: 0.49,
+    savings: "Most coins",
     features: [
-      "50 high-performing LinkedIn posts",
-      "LinkedIn carousel posts",
-      "High-quality slide exports",
-      "AI-powered content writing",
-      "Priority generation queue",
-      "Custom brand colors",
+      "100 coins for power users",
+      "Export-ready LinkedIn carousels",
+      "Team-friendly for frequent posting",
+      "Priority support",
     ],
     popular: false,
   },
@@ -60,14 +60,14 @@ const pricingPlans = [
 
 const faqs = [
   {
-    question: "What is a credit?",
+    question: "What is a coin?",
     answer:
-      "One credit equals one high-performing LinkedIn post. Each post includes 8-10 optimized slides designed for maximum engagement and performance on LinkedIn.",
+      "One coin equals one AI-powered carousel generation. Each generation includes 8-10 optimized slides designed for maximum engagement on LinkedIn.",
   },
   {
-    question: "Do credits expire?",
+    question: "Do coins expire?",
     answer:
-      "No, your credits never expire. Use them whenever you need to create high-performing LinkedIn content that drives engagement and results.",
+      "No, your coins never expire. Use them whenever you need to create high-performing LinkedIn content that drives engagement and results.",
   },
   {
     question: "Which platforms are supported?",
@@ -75,9 +75,9 @@ const faqs = [
       "cropdot specializes exclusively in LinkedIn. Our platform is built specifically for creating high-performing LinkedIn content that drives engagement and results. LinkedIn is our expertise.",
   },
   {
-    question: "Can I purchase more credits later?",
+    question: "Can I purchase more coins later?",
     answer:
-      "Yes! You can purchase additional credit packages at any time. Your new credits will be added to your existing balance.",
+      "Yes! You can purchase additional coin packages at any time. Your new coins will be added to your existing balance.",
   },
   {
     question: "How long does it take to generate a LinkedIn post?",
@@ -97,11 +97,21 @@ const faqs = [
   {
     question: "Can I get a refund?",
     answer:
-      "We offer refunds within 24 hours of purchase if you haven't used any credits. Please contact support@cropdot.ai for assistance.",
+      "We offer refunds within 24 hours of purchase if you haven't used any coins. Please contact support@cropdot.ai for assistance.",
   },
 ]
 
 export default function PricingPage() {
+  const { coins, refreshCoins } = useCoins()
+
+  const handlePurchase = (packageName: string, coinsToAdd: number) => {
+    const newBalance = addCoins(coinsToAdd)
+    refreshCoins()
+    toast.success("Coins added", {
+      description: `${coinsToAdd} coin${coinsToAdd === 1 ? "" : "s"} from ${packageName} added. You now have ${newBalance} coin${newBalance === 1 ? "" : "s"}.`,
+    })
+  }
+
   return (
     <PageBackground className={interTight.variable}>
       <style jsx>{`
@@ -124,16 +134,17 @@ export default function PricingPage() {
               backgroundImage: "linear-gradient(to bottom, #ffffff, #888888)",
             }}
           >
-            Simple, transparent pricing
+            Buy coins and keep generating
           </h1>
           <p className="text-sm md:text-base text-muted-foreground max-w-2xl mx-auto">
-            Buy credits and create high-performing LinkedIn content in just a couple clicks.
+            Purchase coins for fast, LinkedIn-ready carousels. Each generation costs 1 coin.
           </p>
+          <p className="text-xs text-muted-foreground mt-2">Current balance: {coins} coin{coins === 1 ? "" : "s"}</p>
         </div>
 
         {/* Pricing cards */}
         <div className="grid md:grid-cols-3 gap-4 md:gap-6 mb-16 md:mb-24">
-          {pricingPlans.map((plan) => (
+          {coinPackages.map((plan) => (
             <div
               key={plan.name}
               className={cn(
@@ -168,7 +179,7 @@ export default function PricingPage() {
                           </span>
                         </div>
                         <CardDescription className="mt-1.5 text-xs">
-                          {plan.credits} credits • ${plan.pricePerCredit.toFixed(2)} per post
+                          {plan.coins} coins • ${plan.pricePerCoin.toFixed(2)} per coin
                         </CardDescription>
                         {plan.savings && (
                           <div className="mt-1.5">
@@ -204,6 +215,7 @@ export default function PricingPage() {
                         />
                         {/* Button */}
                         <Button
+                          onClick={() => handlePurchase(plan.name, plan.coins)}
                           className="relative w-full h-10 text-sm font-medium text-white"
                           style={{
                             background: "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6)",
@@ -211,7 +223,7 @@ export default function PricingPage() {
                             animation: "borderRun 3s linear infinite",
                           }}
                         >
-                          Get started
+                          Buy coins
                         </Button>
                       </div>
                     </CardFooter>
@@ -230,7 +242,7 @@ export default function PricingPage() {
                         </span>
                       </div>
                       <CardDescription className="mt-1.5 text-xs">
-                        {plan.credits} credits • ${plan.pricePerCredit.toFixed(2)} per post
+                        {plan.coins} coins • ${plan.pricePerCoin.toFixed(2)} per coin
                       </CardDescription>
                       {plan.savings && (
                         <div className="mt-1.5">
@@ -254,8 +266,12 @@ export default function PricingPage() {
                   </CardContent>
 
                   <CardFooter className="pt-4">
-                    <Button variant="outline" className="w-full h-10 text-sm font-medium">
-                      Get started
+                    <Button
+                      variant="outline"
+                      className="w-full h-10 text-sm font-medium"
+                      onClick={() => handlePurchase(plan.name, plan.coins)}
+                    >
+                      Buy coins
                     </Button>
                   </CardFooter>
                 </Card>
@@ -283,7 +299,7 @@ export default function PricingPage() {
                   </div>
                   <div>
                     <div className="text-3xl font-bold text-primary mb-2">∞</div>
-                    <p className="text-sm text-muted-foreground">Credits never expire</p>
+                    <p className="text-sm text-muted-foreground">Coins never expire</p>
                   </div>
                 </div>
               </div>
