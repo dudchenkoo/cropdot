@@ -9,7 +9,8 @@
     "start": "next start",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:linear": "tsx test-linear.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.49",
@@ -55,6 +56,7 @@
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "ts-jest": "^29.2.5",
+    "tsx": "^4.20.6",
     "tw-animate-css": "1.3.3",
     "typescript": "^5"
   }
