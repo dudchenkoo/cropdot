@@ -4,8 +4,8 @@ import Google from "next-auth/providers/google"
 const handler = NextAuth({
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
   ],
   session: {
@@ -31,7 +31,12 @@ const handler = NextAuth({
       return session
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-development",
+  pages: {
+    signIn: "/",
+    error: "/",
+  },
+  debug: process.env.NODE_ENV === "development",
 })
 
 export { handler as GET, handler as POST }

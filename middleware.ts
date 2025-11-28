@@ -3,6 +3,11 @@ import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
 
 export async function middleware(req: NextRequest) {
+  // Skip middleware for NextAuth API routes
+  if (req.nextUrl.pathname.startsWith("/api/auth")) {
+    return NextResponse.next()
+  }
+
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
 
   // Protect dashboard and create routes
