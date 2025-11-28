@@ -34,6 +34,7 @@ import {
 } from "@/lib/constants"
 import { generateLayerId, slideToLayers, getPatternBackground } from "@/lib/helpers"
 import { loadCarousel, saveCarousel, deleteCarousel, type StoredCarousel } from "@/lib/storage"
+import { exportAllSlidesToImages, exportCarouselToPDF, exportSlideToImage } from "@/lib/export"
 import { CarouselForm } from "./carousel-form"
 const CarouselPreview = dynamic(() => import("./carousel-preview").then((mod) => mod.CarouselPreview), {
   ssr: false,
@@ -94,7 +95,13 @@ export function CarouselGenerator(): JSX.Element {
   const [savedStatus, setSavedStatus] = useState<string | null>(null)
   const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | "info" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
+  const [exportFormat, setExportFormat] = useState<"pdf" | "png" | "jpg" | "zip">("pdf")
+  const [exportScale, setExportScale] = useState<number>(2)
+  const [exportQuality, setExportQuality] = useState<number>(0.92)
+  const [exportAllSlides, setExportAllSlides] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
   const actionPanelRef = useRef<HTMLDivElement>(null)
+  const exportContainerRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -330,6 +337,67 @@ export function CarouselGenerator(): JSX.Element {
 
   const updateCarouselData = (updatedData: CarouselData, statusMessage?: string): void => {
     commitCarouselChange(updatedData, statusMessage)
+  }
+
+  const getExportableSlides = () => {
+    const exportContainer = exportContainerRef.current
+    if (!exportContainer) return []
+
+    const slides = Array.from(exportContainer.querySelectorAll<HTMLElement>("[data-export-slide-index]"))
+    if (exportAllSlides) return slides
+
+    return slides.filter((slide) => Number(slide.dataset.exportSlideIndex) === selectedSlideIndex)
+  }
+
+  const handleExportCarousel = async () => {
+    if (!carouselData) {
+      toast.error("No carousel to export")
+      return
+    }
+
+    const slides = getExportableSlides()
+    if (!slides.length) {
+      toast.error("No slides available for export")
+      return
+    }
+
+    const filenamePrefix = carouselData.topic?.trim() || "carousel"
+    const toastId = toast.loading("Preparing export...")
+    setIsExporting(true)
+
+    try {
+      if (exportFormat === "pdf") {
+        await exportCarouselToPDF(slides, { filenamePrefix, scale: exportScale })
+      } else if (exportFormat === "zip") {
+        await exportAllSlidesToImages(slides, {
+          filenamePrefix,
+          scale: exportScale,
+          quality: exportQuality,
+          format: "png",
+        })
+      } else if (slides.length > 1) {
+        await exportAllSlidesToImages(slides, {
+          filenamePrefix,
+          scale: exportScale,
+          quality: exportQuality,
+          format: exportFormat,
+        })
+      } else {
+        await exportSlideToImage(slides[0], {
+          filenamePrefix,
+          scale: exportScale,
+          quality: exportQuality,
+          format: exportFormat,
+        })
+      }
+
+      toast.success("Export ready!", { id: toastId })
+    } catch (error) {
+      console.error("Export failed", error)
+      toast.error("Failed to export carousel", { id: toastId })
+    } finally {
+      setIsExporting(false)
+    }
   }
 
 
@@ -1100,13 +1168,36 @@ export function CarouselGenerator(): JSX.Element {
                       />
                     </ErrorBoundary>
                   </div>
-                
-                {/* Fixed Bottom Action Panel */}
-                <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur-sm">
-                  <div className="w-full px-4 py-2">
-                    {/* Action buttons */}
-                    <div className="flex items-center justify-between gap-3 flex-wrap max-w-full">
-                    <div className="flex items-center gap-2 flex-wrap">
+
+                  {/* Hidden export container to capture high-resolution slides */}
+                  <div
+                    ref={exportContainerRef}
+                    aria-hidden="true"
+                    className="pointer-events-none fixed left-[-9999px] top-0 flex gap-4"
+                  >
+                    {carouselData.slides.map((slide, index) => (
+                      <div
+                        key={`export-slide-${slide.id || index}`}
+                        data-export-slide-index={index}
+                        className="shadow-lg"
+                      >
+                        <SlideCard
+                          slide={slide}
+                          index={index}
+                          total={carouselData.slides.length}
+                          header={carouselData.header}
+                          footer={carouselData.footer}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Fixed Bottom Action Panel */}
+                  <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur-sm">
+                    <div className="w-full px-4 py-2">
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-between gap-3 flex-wrap max-w-full">
+                        <div className="flex items-center gap-2 flex-wrap">
                       <button
                         aria-label="Open template settings"
                         onClick={() => setSelectedAction(selectedAction === "template" ? null : "template")}
@@ -1273,6 +1364,7 @@ export function CarouselGenerator(): JSX.Element {
                        selectedAction === "template" ? "Template" :
                        selectedAction === "layout" ? "Layout" :
                        selectedAction === "size" ? "Size" :
+                       selectedAction === "export" ? "Export" :
                        selectedAction === "info" ? "Info" :
                        "Edit slide"}
                     </span>
@@ -1756,6 +1848,105 @@ export function CarouselGenerator(): JSX.Element {
                           </>
                         )}
                       </div>
+                    </div>
+                  ) : selectedAction === "export" ? (
+                    /* Export View */
+                    <div className="p-4 space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground block">Export format</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {([
+                            { value: "pdf", label: "PDF", helper: "Multi-page document" },
+                            { value: "png", label: "PNG", helper: "High-quality image" },
+                            { value: "jpg", label: "JPG", helper: "Smaller image" },
+                            { value: "zip", label: "ZIP", helper: "Bundle images" },
+                          ] as const).map((option) => {
+                            const isSelected = exportFormat === option.value
+                            return (
+                              <button
+                                key={option.value}
+                                onClick={() => setExportFormat(option.value)}
+                                className={cn(
+                                  "flex flex-col items-start gap-1 px-3 py-2 rounded-lg border text-left transition-colors",
+                                  isSelected
+                                    ? "border-primary bg-primary/10 text-white"
+                                    : "border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10"
+                                )}
+                                aria-pressed={isSelected}
+                              >
+                                <span className="text-sm font-medium">{option.label}</span>
+                                <span className="text-[11px] text-muted-foreground">{option.helper}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground block">Resolution</label>
+                        <div className="flex items-center gap-2">
+                          {[1, 2, 3].map((scaleOption) => {
+                            const isSelected = exportScale === scaleOption
+                            return (
+                              <button
+                                key={scaleOption}
+                                onClick={() => setExportScale(scaleOption)}
+                                className={cn(
+                                  "flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors",
+                                  isSelected
+                                    ? "border-primary bg-primary/10 text-white"
+                                    : "border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10"
+                                )}
+                                aria-pressed={isSelected}
+                              >
+                                {scaleOption}x
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">Higher scales create sharper exports for retina screens.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs text-muted-foreground">Image quality</label>
+                          <span className="text-xs text-muted-foreground">{Math.round(exportQuality * 100)}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={70}
+                          max={100}
+                          step={5}
+                          value={Math.round(exportQuality * 100)}
+                          onChange={(event) => setExportQuality(Number(event.target.value) / 100)}
+                          className="w-full accent-white/60"
+                          aria-label="Image export quality"
+                        />
+                        <p className="text-[11px] text-muted-foreground">Quality applies to PNG and JPG exports.</p>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                        <div>
+                          <label className="text-sm font-medium">Export all slides</label>
+                          <p className="text-xs text-muted-foreground">Turn off to export only the current slide.</p>
+                        </div>
+                        <Switch
+                          checked={exportAllSlides}
+                          onCheckedChange={setExportAllSlides}
+                          aria-label="Toggle export scope"
+                        />
+                      </div>
+
+                      <Button
+                        className="w-full"
+                        onClick={handleExportCarousel}
+                        disabled={isExporting}
+                      >
+                        {isExporting ? "Preparing export..." : `Export ${exportAllSlides ? "all slides" : "current slide"}`}
+                      </Button>
+                      <p className="text-[11px] text-muted-foreground text-center">
+                        Images are bundled into a ZIP when exporting multiple slides.
+                      </p>
                     </div>
                   ) : selectedAction === "size" ? (
                     /* Size Settings View */
