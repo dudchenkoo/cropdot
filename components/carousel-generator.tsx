@@ -52,6 +52,7 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { canRedo, canUndo, createHistory, pushState, redo as redoHistory, undo as undoHistory, type HistoryState } from "@/lib/history"
 import { useCoins } from "@/hooks/use-coins"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -81,6 +82,7 @@ export function CarouselGenerator(): JSX.Element {
   const [viewMode, setViewMode] = useState<"dashboard" | "creation">("dashboard")
   const [savedCarousels, setSavedCarousels] = useState<StoredCarousel[]>([])
   const { coins } = useCoins()
+  const isMobile = useIsMobile()
   
   // Theme-aware dot pattern: light dots in dark mode, dark dots in light mode
   // Use default dark pattern until mounted to prevent hydration mismatch
@@ -100,6 +102,7 @@ export function CarouselGenerator(): JSX.Element {
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [carouselToDelete, setCarouselToDelete] = useState<StoredCarousel | null>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement>>({})
 
   const commitCarouselChange = useCallback(
@@ -117,6 +120,10 @@ export function CarouselGenerator(): JSX.Element {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    setIsSidebarOpen(!isMobile)
+  }, [isMobile])
 
   useEffect(() => {
     setSavedCarousels(loadCarousel())
@@ -816,8 +823,8 @@ export function CarouselGenerator(): JSX.Element {
             <div className="flex flex-1 flex-col overflow-hidden">
             {/* Dashboard Title Section - only show if we have LinkedIn posts */}
             {savedCarousels.length > 0 && (
-              <div className="border-b border-border px-6 py-4 bg-background">
-                <div className="max-w-7xl mx-auto flex items-center justify-between">
+              <div className="border-b border-border px-4 sm:px-6 py-4 bg-background">
+                <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">{savedCarousels.length} LinkedIn posts</span>
                   </div>
@@ -835,7 +842,7 @@ export function CarouselGenerator(): JSX.Element {
                     <button
                       aria-label="Create new LinkedIn post"
                       onClick={handleStartNewGeneration}
-                      className="relative px-5 py-2 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
+                      className="relative w-full sm:w-auto px-5 py-2 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
                     >
                       New generation
                     </button>
@@ -1096,7 +1103,7 @@ export function CarouselGenerator(): JSX.Element {
             status={savedStatus}
           />
 
-          <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 overflow-hidden flex-col lg:flex-row">
             <section
               className="flex-1 overflow-auto relative bg-background"
               style={{
@@ -1113,7 +1120,17 @@ export function CarouselGenerator(): JSX.Element {
 
               {carouselData ? (
                 <>
-                  <div className="relative z-10 flex items-center justify-center min-h-full pb-24">
+                  <div className="relative z-10 flex items-center justify-end w-full px-4 pt-4 lg:hidden">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full sm:w-auto"
+                      onClick={() => setIsSidebarOpen(true)}
+                    >
+                      Edit controls
+                    </Button>
+                  </div>
+                  <div className="relative z-10 flex items-center justify-center min-h-full pb-24 px-4 sm:px-6">
                     <ErrorBoundary componentName="CarouselPreview">
                       <CarouselPreview
                         data={carouselData}
@@ -1136,10 +1153,10 @@ export function CarouselGenerator(): JSX.Element {
                 
                 {/* Fixed Bottom Action Panel */}
                 <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur-sm">
-                  <div className="w-full px-4 py-2">
+                  <div className="w-full px-3 sm:px-4 py-2 pb-[calc(env(safe-area-inset-bottom)+12px)]">
                     {/* Action buttons */}
-                    <div className="flex items-center justify-between gap-3 flex-wrap max-w-full">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 max-w-full">
+                    <div className="flex items-center gap-2 flex-nowrap overflow-x-auto pb-1 sm:pb-0">
                       <button
                         aria-label="Open template settings"
                         onClick={() => setSelectedAction(selectedAction === "template" ? null : "template")}
@@ -1226,12 +1243,12 @@ export function CarouselGenerator(): JSX.Element {
                         <span className="text-[10px]">Info</span>
                       </button>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                         <button
                           aria-label="Toggle export options"
                           onClick={() => setSelectedAction(selectedAction === "export" ? null : "export")}
                           className={cn(
-                            "px-4 py-2 rounded-lg border border-border bg-background hover:bg-secondary text-foreground text-sm font-medium transition-colors",
+                            "px-4 py-2 rounded-lg border border-border bg-background hover:bg-secondary text-foreground text-sm font-medium transition-colors w-full sm:w-auto",
                             selectedAction === "export"
                               ? "bg-primary text-primary-foreground border-primary"
                               : ""
@@ -1242,7 +1259,7 @@ export function CarouselGenerator(): JSX.Element {
                         <button
                           aria-label="Save and exit to dashboard"
                           onClick={handleSaveAndExit}
-                          className="px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors cursor-pointer"
+                          className="px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors cursor-pointer w-full sm:w-auto"
                         >
                           Save & Exit
                         </button>
@@ -1284,11 +1301,33 @@ export function CarouselGenerator(): JSX.Element {
             )}
           </section>
 
+          {isMobile && isSidebarOpen && (
+            <div
+              className="fixed inset-0 z-20 bg-background/80 backdrop-blur-sm lg:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+              aria-hidden
+            />
+          )}
+
           {carouselData && (
-          <aside className="w-[380px] border-l border-border flex flex-col bg-background">
+          <aside
+              className={cn(
+                "w-full lg:w-[380px] border-l border-border flex flex-col bg-background transition-transform duration-300 fixed lg:static top-0 right-0 bottom-0 z-30 shadow-2xl lg:shadow-none",
+                isMobile ? (isSidebarOpen ? "translate-x-0" : "translate-x-full") : "translate-x-0",
+              )}
+            >
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between border-b border-border px-4 py-3">
                   <div className="flex items-center gap-2">
+                    {isMobile && (
+                      <button
+                        aria-label="Close controls"
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="p-1 rounded hover:bg-white/10 transition-colors lg:hidden"
+                      >
+                        <X className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    )}
                     {selectedAction && (
                       <button
                         aria-label="Close settings"
