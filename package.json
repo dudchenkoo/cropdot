@@ -10,7 +10,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:linear": "tsx test-linear.ts"
+    "test:linear": "tsx test-linear.ts",
+    "create-backlog-issues": "tsx scripts/create-backlog-issues.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.49",
