@@ -1,7 +1,8 @@
 import type { Slide, Layer } from "@/lib/carousel-types"
 import { cn } from "@/lib/utils"
 import { Quote } from "lucide-react"
-import type React from "react"
+import Image from "next/image"
+import React, { memo, useMemo } from "react"
 import { getBackgroundStyle, getContentFromLayers, getLayerStyles } from "@/lib/helpers"
 import { DEFAULT_HIGHLIGHT_COLOR } from "@/lib/constants"
 
@@ -71,12 +72,19 @@ export function renderTextWithHighlights(text: string, highlightColor: string | 
   return <>{parts}</>
 }
 
-export function SlideCard({ slide, index, total, compact = false, onDelete, header, footer }: SlideCardProps) {
+function SlideCardComponent({ slide, index, total, compact = false, onDelete, header, footer }: SlideCardProps) {
   const isFirst = index === 0
   const isLast = index === total - 1
 
-  const content = getContentFromLayers(slide.layers, slide)
-  const backgroundStyle = getBackgroundStyle(slide.background)
+  const content = useMemo(() => getContentFromLayers(slide.layers, slide), [slide])
+  const backgroundStyle = useMemo(() => getBackgroundStyle(slide.background), [slide.background])
+  const backgroundPhoto = slide.background?.type === "photo" ? slide.background.photoUrl : null
+  const containerStyle = useMemo(
+    () => (backgroundPhoto ? { ...backgroundStyle, backgroundImage: undefined } : backgroundStyle),
+    [backgroundPhoto, backgroundStyle],
+  )
+  const overlayOpacity = slide.background?.overlayOpacity ?? 0
+  const overlayColor = slide.background?.overlayColor ?? "#000000"
 
   // Determine aspect ratio based on slide size
   const getAspectRatio = () => {
@@ -92,8 +100,26 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
         "flex flex-col justify-between",
         compact ? `w-full ${getAspectRatio()} p-4` : `w-80 ${getAspectRatio()} p-6`,
       )}
-      style={backgroundStyle}
+      style={containerStyle}
     >
+      {backgroundPhoto && (
+        <Image
+          src={backgroundPhoto}
+          alt="Slide background"
+          fill
+          sizes="(max-width: 768px) 100vw, 320px"
+          className="object-cover pointer-events-none"
+          loading="lazy"
+          priority={false}
+        />
+      )}
+      {backgroundPhoto && overlayOpacity > 0 && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ backgroundColor: overlayColor, opacity: overlayOpacity }}
+          aria-hidden
+        />
+      )}
       {/* Header */}
       {header?.enabled && header.text && (
         <div className="absolute top-0 left-0 right-0 px-4 py-2 text-xs text-muted-foreground border-b border-white/10 bg-background/50 backdrop-blur-sm z-10">
@@ -291,3 +317,5 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
     </div>
   )
 }
+
+export const SlideCard = memo(SlideCardComponent)

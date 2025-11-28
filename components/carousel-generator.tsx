@@ -1,9 +1,10 @@
 "use client"
 
 import type React from "react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import { Inter_Tight } from "next/font/google"
+import dynamic from "next/dynamic"
 import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, ChevronLeft, ChevronRight, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, Undo2, Redo2, X, Shuffle, Info, Bold, Italic, Underline, Strikethrough, ListOrdered, List, Highlighter } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { isCarouselData } from "@/lib/carousel-types"
@@ -34,7 +35,9 @@ import {
 import { generateLayerId, slideToLayers, getPatternBackground } from "@/lib/helpers"
 import { loadCarousel, saveCarousel, deleteCarousel, type StoredCarousel } from "@/lib/storage"
 import { CarouselForm } from "./carousel-form"
-import { CarouselPreview } from "./carousel-preview"
+const CarouselPreview = dynamic(() => import("./carousel-preview").then((mod) => mod.CarouselPreview), {
+  ssr: false,
+})
 import { SlideCard } from "./slide-card"
 import { Header } from "./header"
 import { ErrorBoundary } from "./error-boundary"
@@ -81,11 +84,10 @@ export function CarouselGenerator(): JSX.Element {
   
   // Theme-aware dot pattern: light dots in dark mode, dark dots in light mode
   // Use default dark pattern until mounted to prevent hydration mismatch
-  const dotPatternColor = mounted && theme === "dark" 
-    ? `rgba(255, 255, 255, 0.08)` 
-    : mounted && theme === "light"
-    ? `rgba(0, 0, 0, 0.03)`
-    : `rgba(255, 255, 255, 0.08)` // Default to dark pattern until mounted
+  const dotPatternColor = useMemo(() => {
+    if (!mounted) return `rgba(255, 255, 255, 0.08)`
+    return theme === "dark" ? `rgba(255, 255, 255, 0.08)` : `rgba(0, 0, 0, 0.03)`
+  }, [mounted, theme])
   const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0)
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
   const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null)
@@ -778,8 +780,11 @@ export function CarouselGenerator(): JSX.Element {
     setSelectedLayerId(layerId)
   }
 
-  const currentSlide = carouselData?.slides[selectedSlideIndex]
-  const selectedLayer = currentSlide?.layers.find((l) => l.id === selectedLayerId)
+  const currentSlide = useMemo(() => carouselData?.slides[selectedSlideIndex], [carouselData, selectedSlideIndex])
+  const selectedLayer = useMemo(
+    () => currentSlide?.layers.find((l) => l.id === selectedLayerId),
+    [currentSlide, selectedLayerId],
+  )
 
   // Dashboard view - show when viewMode is dashboard
   if (viewMode === "dashboard") {

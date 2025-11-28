@@ -1,3 +1,11 @@
+const bundleAnalyzerModule = await import('@next/bundle-analyzer').catch(() => ({
+  default: () => (config) => config,
+}))
+
+const withBundleAnalyzer = bundleAnalyzerModule.default({
+  enabled: process.env.ANALYZE === 'true',
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -22,4 +30,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default withBundleAnalyzer(nextConfig)
