@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { memo, useMemo, useState } from "react"
 import type { CarouselData } from "@/lib/carousel-types"
 import { SlideCard } from "./slide-card"
 import { Button } from "@/components/ui/button"
@@ -27,7 +27,7 @@ interface CarouselPreviewProps {
   onRandomBackgroundColor?: (index: number) => void
 }
 
-export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide, onSlideChange, onAddSlide, onDeleteSlide, onDuplicateSlide, onReorderSlides, onCycleHorizontalAlign, onCycleVerticalAlign, onRandomBackgroundColor }: CarouselPreviewProps) {
+function CarouselPreviewComponent({ data, isLoading, currentSlide: controlledSlide, onSlideChange, onAddSlide, onDeleteSlide, onDuplicateSlide, onReorderSlides, onCycleHorizontalAlign, onCycleVerticalAlign, onRandomBackgroundColor }: CarouselPreviewProps) {
   const [internalSlide, setInternalSlide] = useState(0)
   const [viewMode, setViewMode] = useState<"single" | "grid">("single")
   const [draggedSlideIndex, setDraggedSlideIndex] = useState<number | null>(null)
@@ -71,7 +71,7 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
     )
   }
 
-  const slides = data.slides || []
+  const slides = useMemo(() => data?.slides || [], [data])
 
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={0}>
@@ -418,3 +418,5 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
     </TooltipProvider>
   )
 }
+
+export const CarouselPreview = memo(CarouselPreviewComponent)
