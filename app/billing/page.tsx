@@ -8,17 +8,22 @@ import { Footer } from "@/components/footer"
 import { PageBackground } from "@/components/page-background"
 import { getInvoices, downloadInvoice, type Invoice } from "@/lib/billing"
 import { getUserEmail } from "@/lib/avatar"
+import { useSession } from "next-auth/react"
 
 const interTight = Inter_Tight({ subsets: ["latin"], variable: "--font-inter-tight" })
 
 export default function BillingPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [userEmail, setUserEmail] = useState<string>("")
+  const { data: session } = useSession()
 
   useEffect(() => {
     setInvoices(getInvoices())
-    setUserEmail(getUserEmail())
   }, [])
+
+  useEffect(() => {
+    setUserEmail(getUserEmail(session))
+  }, [session])
 
   const handleDownload = (invoice: Invoice) => {
     downloadInvoice(invoice, userEmail)

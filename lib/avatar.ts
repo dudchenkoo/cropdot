@@ -1,52 +1,24 @@
-"use client"
+import type { Session } from "next-auth"
 
-const AVATAR_SEED_KEY = "cropdot-avatar-seed"
+const DEFAULT_SEED = "user"
 
 /**
- * Get or create a consistent seed for the user's avatar
- * This ensures the same avatar is shown every time
+ * Generate avatar URL using DiceBear API.
+ * Prefers the image provided by the authentication provider.
  */
-export function getAvatarSeed(): string {
-  if (typeof window === "undefined") return "user"
-
-  const existing = window.localStorage.getItem(AVATAR_SEED_KEY)
-  if (existing) {
-    return existing
+export function getAvatarUrl(session?: Session | null): string {
+  if (session?.user?.image) {
+    return session.user.image
   }
 
-  // Generate a random seed and store it
-  const seed = `user-${Math.random().toString(36).substring(2, 15)}`
-  window.localStorage.setItem(AVATAR_SEED_KEY, seed)
-  return seed
-}
-
-/**
- * Generate avatar URL using DiceBear API
- * Using adventurer style for professional look
- */
-export function getAvatarUrl(seed?: string): string {
-  const avatarSeed = seed || getAvatarSeed()
-  // Using DiceBear's adventurer style - clean and professional
+  const avatarSeed = session?.user?.email || DEFAULT_SEED
   return `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(avatarSeed)}`
 }
 
-const USER_EMAIL_KEY = "cropdot-user-email"
-
 /**
- * Get user email from localStorage or return placeholder
+ * Get user email from the authenticated session or return a placeholder.
  */
-export function getUserEmail(): string {
-  if (typeof window === "undefined") return "user@example.com"
-
-  const email = window.localStorage.getItem(USER_EMAIL_KEY)
-  return email || "user@example.com"
-}
-
-/**
- * Set user email in localStorage
- */
-export function setUserEmail(email: string): void {
-  if (typeof window === "undefined") return
-  window.localStorage.setItem(USER_EMAIL_KEY, email)
+export function getUserEmail(session?: Session | null): string {
+  return session?.user?.email || "user@example.com"
 }
 
