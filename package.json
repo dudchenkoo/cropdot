@@ -11,7 +11,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:linear": "tsx test-linear.ts",
-    "create-backlog-issues": "tsx scripts/create-backlog-issues.ts"
+    "create-backlog-issues": "tsx scripts/create-backlog-issues.ts",
+    "create-priority-tasks": "tsx scripts/create-priority-tasks.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.49",
