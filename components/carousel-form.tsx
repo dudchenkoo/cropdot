@@ -107,7 +107,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         setErrorMessage(friendlyMessage)
         toast.error("Generation failed", {
           description: friendlyMessage,
-        })
+      })
         return
       }
 
@@ -137,9 +137,9 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
         })
         onGenerate(data)
       } else {
-        const reader = response.body?.getReader()
-        const decoder = new TextDecoder()
-        let fullText = ""
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let fullText = ""
 
         if (!reader) {
           setErrorMessage("We received an unexpected response from the server. Please try again.")
@@ -150,14 +150,14 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           const { done, value } = await reader.read()
           if (done) break
           if (value) {
-            fullText += decoder.decode(value, { stream: true })
-          }
+          fullText += decoder.decode(value, { stream: true })
         }
+      }
 
         console.log("Full response text:", fullText.substring(0, 500))
 
-        const jsonMatch = fullText.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
+      const jsonMatch = fullText.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
           try {
             const data: unknown = JSON.parse(jsonMatch[0])
             if (!isCarouselData(data)) {
@@ -181,7 +181,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
             toast.success("LinkedIn post created", {
               description: `Successfully generated ${data.slides.length} slide${data.slides.length > 1 ? 's' : ''} for your LinkedIn content.`,
             })
-            onGenerate(data)
+        onGenerate(data)
           } catch (parseError) {
             console.error("JSON Parse Error:", { error: parseError, fullText })
             const errorMsg = "We couldn't read the carousel response. Please try again."
@@ -263,7 +263,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs text-muted-foreground">Tone</label>
+          <label className="text-xs text-muted-foreground">Tone</label>
         <div className="flex flex-wrap gap-2">
           {TONE_OPTIONS.map((t) => {
             const isSelected = selectedTone === t.value
@@ -312,8 +312,8 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           }}
         />
         {/* Button */}
-        <button
-          type="submit"
+      <button
+        type="submit"
           className="relative w-full px-6 py-2.5 rounded-lg text-white text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
           style={{
             background: "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6)",
@@ -323,7 +323,7 @@ export function CarouselForm({ onGenerate, isLoading, setIsLoading }: CarouselFo
           aria-label="Generate carousel with AI"
         >
           Generate with AI
-        </button>
+      </button>
       </div>
 
       <p className="text-xs leading-relaxed text-muted-foreground">

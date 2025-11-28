@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import { Quote } from "lucide-react"
 import type React from "react"
 import { getBackgroundStyle, getContentFromLayers, getLayerStyles } from "@/lib/helpers"
+import { DEFAULT_HIGHLIGHT_COLOR } from "@/lib/constants"
 
 interface SlideCardProps {
   slide: Slide
@@ -12,6 +13,62 @@ interface SlideCardProps {
   onDelete?: (index: number) => void
   header?: { enabled: boolean; text: string }
   footer?: { enabled: boolean; text: string }
+}
+
+// Helper function to parse and render text with ==highlight== markers
+function renderTextWithHighlights(text: string, highlightColor: string | undefined, defaultHighlightColor: string, className: string, style: React.CSSProperties): React.ReactNode {
+  if (!text.includes('==')) {
+    return <span className={className} style={style}>{text}</span>
+  }
+  
+  // Use the provided highlightColor, or fall back to defaultHighlightColor, or yellow as last resort
+  const colorToUse = highlightColor || defaultHighlightColor || '#ffff00'
+  
+  const parts: React.ReactNode[] = []
+  const regex = /==([^=]+)==/g
+  let lastIndex = 0
+  let match
+  
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before the highlight
+    if (match.index > lastIndex) {
+      parts.push(
+        <span key={`text-${lastIndex}`} className={className} style={style}>
+          {text.substring(lastIndex, match.index)}
+        </span>
+      )
+    }
+    
+    // Add highlighted text with the synced color
+    parts.push(
+      <span
+        key={`highlight-${match.index}`}
+        className={className}
+        style={{
+          ...style,
+          backgroundColor: colorToUse,
+          padding: '0.125rem 0.25rem',
+          borderRadius: '0.25rem',
+          display: 'inline-block',
+        }}
+      >
+        {match[1]}
+      </span>
+    )
+    
+    lastIndex = regex.lastIndex
+  }
+  
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(
+      <span key={`text-${lastIndex}`} className={className} style={style}>
+        {text.substring(lastIndex)}
+      </span>
+    )
+  }
+  
+  return <>{parts}</>
 }
 
 export function SlideCard({ slide, index, total, compact = false, onDelete, header, footer }: SlideCardProps) {
@@ -77,7 +134,7 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
                   <div key={`${layer.id}-${styleKey}`}>
                     {layer.type === "heading" && (
                       layer.style?.listType ? (
-                        <div className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-lg", styleClass)} style={style}>
+                        <div className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-2xl", styleClass)} style={style}>
                           {layer.style.listType === "ordered" ? (
                             <ol className="list-decimal list-inside space-y-1">
                               {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
@@ -89,14 +146,14 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
                           )}
                         </div>
                       ) : (
-                        <h3 className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-lg", styleClass)} style={style}>
-                          {layer.content}
+                        <h3 className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-2xl", styleClass)}>
+                          {renderTextWithHighlights(layer.content, layer.style?.highlightColor, DEFAULT_HIGHLIGHT_COLOR, styleClass, style)}
                         </h3>
                       )
                     )}
                     {layer.type === "subheading" && (
                       layer.style?.listType ? (
-                        <div className={cn("text-muted-foreground font-medium", compact ? "text-xs" : "text-sm", styleClass)} style={style}>
+                        <div className={cn("text-muted-foreground font-medium", compact ? "text-xs" : "text-base", styleClass)} style={style}>
                           {layer.style.listType === "ordered" ? (
                             <ol className="list-decimal list-inside space-y-1">
                               {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
@@ -108,8 +165,8 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
                           )}
                         </div>
                       ) : (
-                        <h4 className={cn("text-muted-foreground font-medium", compact ? "text-xs" : "text-sm", styleClass)} style={style}>
-                          {layer.content}
+                        <h4 className={cn("text-muted-foreground font-medium", compact ? "text-xs" : "text-base", styleClass)}>
+                          {renderTextWithHighlights(layer.content, layer.style?.highlightColor, DEFAULT_HIGHLIGHT_COLOR, styleClass, style)}
                         </h4>
                       )
                     )}
@@ -127,8 +184,8 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
                           )}
                         </div>
                       ) : (
-                        <p className={cn("text-muted-foreground leading-relaxed", compact ? "text-xs line-clamp-4" : "text-sm", styleClass)} style={style}>
-                          {layer.content}
+                        <p className={cn("text-muted-foreground leading-relaxed", compact ? "text-xs line-clamp-4" : "text-sm", styleClass)}>
+                          {renderTextWithHighlights(layer.content, layer.style?.highlightColor, DEFAULT_HIGHLIGHT_COLOR, styleClass, style)}
                         </p>
                       )
                     )}
@@ -225,6 +282,12 @@ export function SlideCard({ slide, index, total, compact = false, onDelete, head
         )}
       </div>
 
+      {/* Footer */}
+      {footer?.enabled && footer.text && (
+        <div className="absolute bottom-0 left-0 right-0 px-4 py-2 text-xs text-muted-foreground border-t border-white/10 bg-background/50 backdrop-blur-sm z-10">
+          {footer.text}
+        </div>
+      )}
     </div>
   )
 }

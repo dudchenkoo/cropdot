@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
-import { Coins, User, Moon, Sun, CreditCard, MessageCircle, LogOut } from "lucide-react"
+import { Coins, User, Moon, Sun, CreditCard, MessageCircle, LogOut, Check } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useCoins } from "@/hooks/use-coins"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -22,11 +22,10 @@ interface HeaderProps {
   topic?: string
   onBack?: () => void
   onLogoClick?: () => void
+  status?: string | null
 }
 
-const LINKEDIN_COLOR = "#0077B5"
-
-export function Header({ subtitle, topic, onBack, onLogoClick }: HeaderProps) {
+export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderProps) {
   const pathname = usePathname()
   const displayTopic = topic || subtitle
   const { coins } = useCoins()
@@ -75,19 +74,16 @@ export function Header({ subtitle, topic, onBack, onLogoClick }: HeaderProps) {
           {displayTopic && (
             <>
               <div className="h-4 w-px bg-border" />
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">{displayTopic}</span>
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full font-medium uppercase tracking-wide border border-border"
-                  style={{
-                    backgroundColor: `${LINKEDIN_COLOR}20`,
-                    color: LINKEDIN_COLOR,
-                    borderColor: `${LINKEDIN_COLOR}40`,
-                  }}
-                >
-                  LinkedIn
-                </span>
-              </div>
+              <span className="text-sm text-muted-foreground">{displayTopic}</span>
+            </>
+          )}
+          {status && (
+            <>
+              {displayTopic && <div className="h-4 w-px bg-border" />}
+              <span className="flex items-center gap-1.5 text-xs text-green-400">
+                <Check className="w-3 h-3" />
+                {status}
+              </span>
             </>
           )}
         </div>

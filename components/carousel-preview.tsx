@@ -81,14 +81,14 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
           <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-background/95 backdrop-blur-sm">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant={viewMode === "single" ? "secondary" : "ghost"}
+          <Button
+            variant={viewMode === "single" ? "secondary" : "ghost"}
                   size="icon"
                   className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
-                  onClick={() => setViewMode("single")}
-                >
+            onClick={() => setViewMode("single")}
+          >
                   <Square className="w-4 h-4" />
-                </Button>
+          </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Single view</p>
@@ -103,14 +103,14 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
                   onClick={() => setViewMode("grid")}
                 >
                   <Grid3x3 className="w-4 h-4" />
-                </Button>
+          </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Grid view</p>
               </TooltipContent>
             </Tooltip>
-          </div>
         </div>
+      </div>
 
       {viewMode === "single" ? (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
@@ -120,15 +120,15 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
               <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-background/95 backdrop-blur-sm">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
+            <Button
                       variant="ghost"
-                      size="icon"
+              size="icon"
                       className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
-                      onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
-                      disabled={currentSlide === 0}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
+              onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))}
+              disabled={currentSlide === 0}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Previous slide</p>
@@ -136,15 +136,15 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
+            <Button
                       variant="ghost"
-                      size="icon"
+              size="icon"
                       className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
-                      onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
-                      disabled={currentSlide === slides.length - 1}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
+              onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))}
+              disabled={currentSlide === slides.length - 1}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Next slide</p>
@@ -411,10 +411,10 @@ export function CarouselPreview({ data, isLoading, currentSlide: controlledSlide
                        />
             </div>
           ))}
-          </div>
+        </div>
         </div>
       )}
-      </div>
+    </div>
     </TooltipProvider>
   )
 }

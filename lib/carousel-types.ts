@@ -65,6 +65,8 @@ export interface SlideBackground {
   photoUrl?: string
   accentColor?: string
   pattern?: BackgroundPattern
+  overlayColor?: string
+  overlayOpacity?: number
 }
 
 export interface Slide {
