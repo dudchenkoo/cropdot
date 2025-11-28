@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { getAvatarUrl, getUserEmail } from "@/lib/avatar"
 
 interface HeaderProps {
@@ -28,11 +29,13 @@ interface HeaderProps {
 export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderProps) {
   const pathname = usePathname()
   const displayTopic = topic || subtitle
-  const { coins } = useCoins()
+  const { coins, isAuthenticated } = useCoins()
   const { theme, setTheme } = useTheme()
   const [avatarUrl, setAvatarUrl] = useState<string>("")
   const [mounted, setMounted] = useState(false)
   const [userEmail, setUserEmail] = useState<string>("")
+
+  const displayedCoins = isAuthenticated ? coins : 0
 
   useEffect(() => {
     setMounted(true)
@@ -108,10 +111,19 @@ export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderP
             </Link>
           </nav>
           <div className="h-6 w-px bg-border" />
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border">
-            <Coins className="w-4 h-4 text-foreground" />
-            <span className="text-sm font-medium text-foreground">{coins}</span>
-          </div>
+          <TooltipProvider delayDuration={200} skipDelayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border cursor-default">
+                  <Coins className="w-4 h-4 text-foreground" />
+                  <span className="text-sm font-medium text-foreground">{displayedCoins}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent align="end">
+                <p className="text-xs">You have {displayedCoins} coins. Each generation costs 1 coin.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="rounded-full hover:ring-2 hover:ring-ring hover:ring-offset-2 transition-all cursor-pointer outline-none">

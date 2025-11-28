@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import { Inter_Tight } from "next/font/google"
@@ -50,6 +51,7 @@ import {
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { canRedo, canUndo, createHistory, pushState, redo as redoHistory, undo as undoHistory, type HistoryState } from "@/lib/history"
+import { useCoins } from "@/hooks/use-coins"
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -78,6 +80,7 @@ export function CarouselGenerator(): JSX.Element {
   const [isLoading, setIsLoading] = useState(false)
   const [viewMode, setViewMode] = useState<"dashboard" | "creation">("dashboard")
   const [savedCarousels, setSavedCarousels] = useState<StoredCarousel[]>([])
+  const { coins } = useCoins()
   
   // Theme-aware dot pattern: light dots in dark mode, dark dots in light mode
   // Use default dark pattern until mounted to prevent hydration mismatch
@@ -790,6 +793,26 @@ export function CarouselGenerator(): JSX.Element {
       <div className="flex flex-1 flex-col overflow-hidden">
             <Header subtitle={undefined} onBack={undefined} onLogoClick={() => setViewMode("dashboard")} />
 
+            {coins === 0 && (
+              <div className="border-b border-border bg-amber-50 px-6 py-3 text-amber-900">
+                <div className="max-w-7xl mx-auto flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    <div>
+                      <p className="text-sm font-semibold">You&apos;ve used your free generation!</p>
+                      <p className="text-xs text-amber-800">Upgrade to create more content.</p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/pricing"
+                    className="inline-flex h-9 items-center justify-center rounded-md border border-amber-200 bg-white px-4 text-xs font-semibold text-amber-900 shadow-sm transition-colors hover:bg-amber-100"
+                  >
+                    Go to pricing
+                  </Link>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-1 flex-col overflow-hidden">
             {/* Dashboard Title Section - only show if we have LinkedIn posts */}
             {savedCarousels.length > 0 && (
@@ -882,13 +905,19 @@ export function CarouselGenerator(): JSX.Element {
                     fontFamily: "var(--font-inter-tight)",
                   }}
                 >
-                    High-performing LinkedIn content
-                  <br />
-                    in just a couple clicks
+                  {coins === 0 ? "You've used your free generation. Get more coins to create content." : (
+                    <>
+                      High-performing LinkedIn content
+                      <br />
+                      in just a couple clicks
+                    </>
+                  )}
                 </h2>
 
                   <p className="text-sm text-muted-foreground text-center max-w-md mb-8">
-                    Our LinkedIn specialization helps you create engaging posts that drive results. Optimized for maximum performance.
+                  {coins === 0
+                      ? "Buy a coin package to keep creating LinkedIn content without interruptions."
+                      : "Our LinkedIn specialization helps you create engaging posts that drive results. Optimized for maximum performance."}
                   </p>
 
                   <div className="relative">
@@ -902,13 +931,22 @@ export function CarouselGenerator(): JSX.Element {
                       }}
                     />
                     {/* Button */}
-                    <button
-                      aria-label="Start generating a carousel"
-                      onClick={handleStartNewGeneration}
-                      className="relative px-6 py-2.5 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
-                    >
-                      Start generating
-                    </button>
+                    {coins === 0 ? (
+                      <Link
+                        href="/pricing"
+                        className="relative inline-flex items-center justify-center px-6 py-2.5 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
+                      >
+                        Buy Coins
+                      </Link>
+                    ) : (
+                      <button
+                        aria-label="Start generating a carousel"
+                        onClick={handleStartNewGeneration}
+                        className="relative px-6 py-2.5 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
+                      >
+                        Start generating
+                      </button>
+                    )}
                   </div>
 
                   {/* Footer */}
