@@ -3,8 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
-import { Coins, User, Moon, Sun, CreditCard, MessageCircle, LogOut } from "lucide-react"
-import { useTheme } from "next-themes"
+import { Coins, User, CreditCard, MessageCircle, LogOut } from "lucide-react"
 import { useCoins } from "@/hooks/use-coins"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -30,7 +29,6 @@ const LINKEDIN_COLOR = "#0077B5"
 export function Header({ subtitle, topic, onBack, onLogoClick, saveStatus }: HeaderProps) {
   const pathname = usePathname()
   const { coins } = useCoins()
-  const { theme, setTheme } = useTheme()
   const [avatarUrl, setAvatarUrl] = useState<string>("")
   const [mounted, setMounted] = useState(false)
   const [userEmail, setUserEmail] = useState<string>("")
@@ -155,23 +153,6 @@ export function Header({ subtitle, topic, onBack, onLogoClick, saveStatus }: Hea
                   <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="cursor-pointer"
-              >
-                {mounted && theme === "dark" ? (
-                  <>
-                    <Sun className="mr-2 h-4 w-4" />
-                    <span>Light Mode</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="mr-2 h-4 w-4" />
-                    <span>Dark Mode</span>
-                  </>
-                )}
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild className="cursor-pointer">
                 <Link href="/billing" className="flex items-center">

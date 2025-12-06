@@ -2,7 +2,6 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { useTheme } from "next-themes"
 import { usePathname, useRouter } from "next/navigation"
 import { ArrowLeft, Copy, Download, Save } from "lucide-react"
 import type { PostGenerationResponse, TextPost } from "@/lib/post-types"
@@ -32,7 +31,6 @@ import { Input } from "@/components/ui/input"
  * ```
  */
 export function PostGenerator(): JSX.Element {
-  const { theme } = useTheme()
   const pathname = usePathname()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)

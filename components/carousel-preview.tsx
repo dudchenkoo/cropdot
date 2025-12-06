@@ -87,8 +87,8 @@ function CarouselPreviewComponent({ data, isLoading, currentSlide: controlledSli
                     "relative z-10 h-8 w-8 flex items-center justify-center rounded-md transition-colors",
                     viewMode === "single" ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   )}
-                  onClick={() => setViewMode("single")}
-                >
+            onClick={() => setViewMode("single")}
+          >
                   <Square className="w-4 h-4" />
                 </button>
               </TooltipTrigger>
@@ -113,8 +113,8 @@ function CarouselPreviewComponent({ data, isLoading, currentSlide: controlledSli
                 <p>Grid view</p>
               </TooltipContent>
             </Tooltip>
-          </div>
         </div>
+      </div>
 
       {viewMode === "single" ? (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] px-4">
@@ -225,16 +225,18 @@ function CarouselPreviewComponent({ data, isLoading, currentSlide: controlledSli
             )}
 
             {/* Current Slide - center */}
-            <div className="relative z-10" key={`slide-wrapper-${currentSlide}-${slides[currentSlide]?.layers?.map(l => `${l.id}-${l.style ? JSON.stringify(l.style) : 'no-style'}`).join('-') || ''}`}>
-              <SlideCard 
-                slide={slides[currentSlide]} 
-                index={currentSlide} 
-                total={slides.length}
-                onDelete={onDeleteSlide}
-                header={data.header}
-                footer={data.footer}
-              />
-            </div>
+            {slides[currentSlide] && (
+              <div className="relative z-10" key={`slide-wrapper-${currentSlide}-${slides[currentSlide]?.layers?.map(l => `${l.id}-${l.style ? JSON.stringify(l.style) : 'no-style'}`).join('-') || ''}`}>
+                <SlideCard 
+                  slide={slides[currentSlide]} 
+                  index={currentSlide} 
+                  total={slides.length}
+                  onDelete={onDeleteSlide}
+                  header={data.header}
+                  footer={data.footer}
+                />
+              </div>
+            )}
 
             {/* Add Slide Button - between current and next */}
             {onAddSlide && (

@@ -2,7 +2,6 @@
 
 import type React from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { Inter_Tight } from "next/font/google"
 import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, ChevronLeft, ChevronRight, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, Undo2, Redo2, X, Shuffle, Info, Bold, Italic, Underline, Strikethrough, ListOrdered, List, FileText, Images } from "lucide-react"
@@ -44,6 +43,7 @@ import { ErrorBoundary } from "./error-boundary"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
+import { ButtonGroup, ButtonGroupItem } from "@/components/ui/button-group"
 import {
   Tooltip,
   TooltipContent,
@@ -76,7 +76,6 @@ const interTight = Inter_Tight({
  * ```
  */
 export function CarouselGenerator(): JSX.Element {
-  const { theme } = useTheme()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 1920, height: 1080 })
@@ -88,13 +87,8 @@ export function CarouselGenerator(): JSX.Element {
   const [carouselViewMode, setCarouselViewMode] = useState<"dashboard" | "creation">("dashboard")
   const [savedCarousels, setSavedCarousels] = useState<StoredCarousel[]>([])
   
-  // Theme-aware dot pattern: light dots in dark mode, dark dots in light mode
-  // Use default dark pattern until mounted to prevent hydration mismatch
-  const dotPatternColor = mounted && theme === "dark" 
-    ? `rgba(255, 255, 255, 0.08)` 
-    : mounted && theme === "light"
-    ? `rgba(0, 0, 0, 0.03)`
-    : `rgba(255, 255, 255, 0.08)` // Default to dark pattern until mounted
+  // Dark theme dot pattern
+  const dotPatternColor = `rgba(255, 255, 255, 0.08)`
   const [carouselSelectedSlideIndex, setCarouselSelectedSlideIndex] = useState<number>(0)
   const [carouselSelectedLayerId, setCarouselSelectedLayerId] = useState<string | null>(null)
   const [carouselDraggedLayerId, setCarouselDraggedLayerId] = useState<string | null>(null)
@@ -153,7 +147,14 @@ export function CarouselGenerator(): JSX.Element {
   }, [])
 
   useEffect(() => {
-    setSavedCarousels(loadCarousel())
+    if (typeof window !== "undefined") {
+      try {
+        setSavedCarousels(loadCarousel())
+      } catch (error) {
+        console.error("Error loading carousels:", error)
+        setSavedCarousels([])
+      }
+    }
   }, [])
 
   // Check for template carousel data from template page
@@ -860,15 +861,13 @@ export function CarouselGenerator(): JSX.Element {
                         : "cover",
                       backgroundPosition: "center",
                       backgroundRepeat: "repeat",
-                      opacity: mounted && theme === "dark" ? 0.05 : 0.02,
+                      opacity: 0.05,
                     }}
                   />
                   <div
                     className="absolute inset-0 pointer-events-none"
                     style={{
-                      background: mounted && theme === "dark" 
-                        ? "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 50%)"
-                        : "radial-gradient(circle at 50% 50%, rgba(0,0,0,0.02) 0%, transparent 50%)",
+                      background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 50%)",
                     }}
                   />
 
@@ -887,9 +886,7 @@ export function CarouselGenerator(): JSX.Element {
                   <h2
                     className="text-2xl md:text-3xl mb-3 bg-clip-text text-transparent font-semibold text-center"
                     style={{
-                      backgroundImage: mounted && theme === "dark"
-                        ? "linear-gradient(to bottom, #ffffff, #888888)"
-                        : "linear-gradient(to bottom, #1a1a1a, #666666)",
+                      backgroundImage: "linear-gradient(to bottom, #ffffff, #888888)",
                       fontFamily: "var(--font-lora), serif",
                     }}
                   >
@@ -1083,7 +1080,7 @@ export function CarouselGenerator(): JSX.Element {
                       : "cover",
                     backgroundPosition: "center",
                     backgroundRepeat: "repeat",
-                    opacity: mounted && theme === "dark" ? 0.05 : 0.02,
+                    opacity: 0.05,
                   }}
                 />
               )}
@@ -1100,7 +1097,7 @@ export function CarouselGenerator(): JSX.Element {
                     <ErrorBoundary componentName="CarouselPreview">
                       <CarouselPreview
                         data={carouselData}
-                        carouselIsLoading={carouselIsLoading}
+                        isLoading={carouselIsLoading}
                         currentSlide={carouselSelectedSlideIndex}
                         onSlideChange={(index) => {
                           setCarouselSelectedSlideIndex(index)
@@ -1774,7 +1771,7 @@ export function CarouselGenerator(): JSX.Element {
                     /* Background Settings View */
                     <div className="p-4 space-y-4 overflow-y-auto">
                       {/* Apply to all slides toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-secondary border border-border">
+                      <div className="flex items-center justify-between">
                         <div>
                           <label className="text-sm font-medium">Apply to all slides</label>
                           <p className="text-xs text-muted-foreground">Apply these settings to all slides</p>
@@ -1798,67 +1795,60 @@ export function CarouselGenerator(): JSX.Element {
                       </div>
 
                       {/* Background Type */}
-                      <div className="px-4 py-3 border-b border-border">
-                        <span className="text-xs text-muted-foreground uppercase tracking-wide">Background Type</span>
+                      <div className="py-3 border-b border-border -mx-4">
+                        <span className="text-xs text-muted-foreground uppercase tracking-wide px-4 block">Background Type</span>
                       </div>
-                      <div className="p-4 space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          {BACKGROUND_TYPES.map((type) => {
-                            const currentType = carouselData.slides[carouselSelectedSlideIndex]?.background?.type || DEFAULT_BACKGROUND_TYPE
-                            const isSelected = currentType === type
-                            return (
-                              <button
-                                key={type}
-                                onClick={() => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { type })}
-                                className={cn(
-                                  "px-4 py-2.5 rounded-lg border transition-all text-sm capitalize",
-                                  isSelected
-                                    ? "bg-accent/20 border-accent text-accent"
-                                    : "bg-secondary border-border hover:bg-muted"
-                                )}
-                              >
-                                {type}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
+                      <ButtonGroup>
+                        {BACKGROUND_TYPES.map((type) => {
+                          const currentType = carouselData.slides[carouselSelectedSlideIndex]?.background?.type || DEFAULT_BACKGROUND_TYPE
+                          const isSelected = currentType === type
+                          return (
+                            <ButtonGroupItem
+                              key={type}
+                              onClick={() => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { type })}
+                              isSelected={isSelected}
+                            >
+                              {type}
+                            </ButtonGroupItem>
+                          )
+                        })}
+                      </ButtonGroup>
 
                       {/* Background Color */}
                       {carouselData.slides[carouselSelectedSlideIndex]?.background?.type !== "photo" && (
                         <>
-                          <div className="px-4 py-3 border-b border-border">
-                            <span className="text-xs text-muted-foreground uppercase tracking-wide">Background Color</span>
-                          </div>
-                          <div className="p-4 space-y-2">
+                          <div className="space-y-2">
+                            <label htmlFor="background-color-input" className="text-sm text-muted-foreground">Background Color</label>
                             <div className="flex items-center gap-2">
-                            <input
-                              ref={backgroundColorPickerRef}
-                              type="color"
-                              value={carouselData.slides[carouselSelectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR}
-                              onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { color: e.target.value })}
-                              className="hidden"
-                              aria-label="Select background color"
-                            />
-                            <div className="flex-1 relative">
-                              <button
-                                type="button"
-                                onClick={() => backgroundColorPickerRef.current?.click()}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded border border-border cursor-pointer hover:scale-110 transition-transform"
-                                style={{ backgroundColor: carouselData.slides[carouselSelectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR }}
-                                aria-label="Open color picker"
-                              />
                               <input
-                                type="text"
+                                ref={backgroundColorPickerRef}
+                                type="color"
                                 value={carouselData.slides[carouselSelectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR}
                                 onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { color: e.target.value })}
-                                className="w-full pl-10 pr-3 py-2 rounded bg-secondary border border-border text-sm focus:outline-none focus:border-ring"
-                                placeholder={DEFAULT_BACKGROUND_COLOR}
-                                aria-label="Background color value"
+                                className="hidden"
+                                aria-label="Select background color"
                               />
+                              <div className="flex-1 relative">
+                                <button
+                                  type="button"
+                                  onClick={() => backgroundColorPickerRef.current?.click()}
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded border border-border cursor-pointer hover:scale-110 transition-transform"
+                                  style={{ backgroundColor: carouselData.slides[carouselSelectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR }}
+                                  aria-label="Open color picker"
+                                />
+                                <input
+                                  id="background-color-input"
+                                  type="text"
+                                  value={carouselData.slides[carouselSelectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR}
+                                  onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { color: e.target.value })}
+                                  className="w-full pl-10 pr-3 py-2 rounded bg-secondary border border-border text-sm focus:outline-none focus:border-ring"
+                                  placeholder={DEFAULT_BACKGROUND_COLOR}
+                                  aria-label="Background color value"
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        </>
                       )}
 
                       {/* Photo Upload */}
@@ -1882,7 +1872,7 @@ export function CarouselGenerator(): JSX.Element {
                                   reader.readAsDataURL(file)
                                 }
                               }}
-                              className="w-full px-3 py-2 rounded bg-secondary border border-border text-sm focus:outline-none focus:border-ring file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-secondary file:text-foreground hover:file:bg-muted cursor-pointer"
+                              className="w-full px-3 py-2 rounded bg-secondary border border-border text-sm focus:outline-none focus:border-ring"
                               aria-label="Upload background photo"
                             />
                           </div>
@@ -1966,13 +1956,9 @@ export function CarouselGenerator(): JSX.Element {
                         </div>
                       )}
 
-                      <div className="border-t border-border" />
-
                       {/* Accent Color */}
-                      <div className="px-4 py-3 border-b border-border">
-                        <span className="text-xs text-muted-foreground uppercase tracking-wide">Accent Color</span>
-                      </div>
-                      <div className="p-4 space-y-2">
+                      <div className="space-y-2">
+                        <label htmlFor="accent-color-input" className="text-sm text-muted-foreground">Accent Color</label>
                         <div className="flex items-center gap-2">
                           <input
                             ref={accentColorPickerRef}
@@ -1991,6 +1977,7 @@ export function CarouselGenerator(): JSX.Element {
                               aria-label="Open color picker"
                             />
                             <input
+                              id="accent-color-input"
                               type="text"
                               value={carouselData.slides[carouselSelectedSlideIndex]?.background?.accentColor || DEFAULT_ACCENT_COLOR}
                               onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { accentColor: e.target.value })}
@@ -2002,11 +1989,9 @@ export function CarouselGenerator(): JSX.Element {
                         </div>
                       </div>
 
-                      <div className="border-t border-border" />
-
                       {/* Pattern Settings */}
-                      <div className="px-4 py-3 border-b border-border">
-                        <div className="flex items-center justify-between">
+                      <div className="py-3 border-b border-border -mx-4">
+                        <div className="flex items-center justify-between px-4">
                           <span className="text-xs text-muted-foreground uppercase tracking-wide">Pattern</span>
                           <Switch
                             checked={carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.enabled ?? false}
@@ -2021,9 +2006,6 @@ export function CarouselGenerator(): JSX.Element {
                         {carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.enabled && (
                           <>
                             {/* Pattern Type */}
-                            <div className="px-4 py-3 border-b border-border">
-                              <span className="text-xs text-muted-foreground uppercase tracking-wide">Pattern Type</span>
-                            </div>
                             <div className="p-4 space-y-2">
                               <div className="grid grid-cols-3 gap-2">
                                 {PATTERN_TYPES.map((patternType) => {
@@ -2049,11 +2031,10 @@ export function CarouselGenerator(): JSX.Element {
                                 })}
                               </div>
                             </div>
-                            </div>
 
                             {/* Pattern Opacity */}
-                            <div className="px-4 py-3 border-b border-border">
-                              <span className="text-xs text-muted-foreground uppercase tracking-wide">Opacity</span>
+                            <div className="py-3 border-b border-border -mx-4">
+                              <span className="text-xs text-muted-foreground uppercase tracking-wide px-4 block">Opacity</span>
                             </div>
                             <div className="p-4 space-y-2">
                               <div className="flex items-center justify-between">
@@ -2096,9 +2077,9 @@ export function CarouselGenerator(): JSX.Element {
                             </div>
 
                             {/* Pattern Scale */}
-                            <div className="px-4 py-3 border-b border-border">
+                            <div className="py-3 border-b border-border -mx-4">
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground uppercase tracking-wide">Scale</span>
+                                <span className="text-xs text-muted-foreground uppercase tracking-wide px-4 block">Scale</span>
                                 <button
                                   aria-label="Toggle pattern scale adjustment"
                                   onClick={() => {
@@ -2146,7 +2127,7 @@ export function CarouselGenerator(): JSX.Element {
                     /* Size Settings View */
                     <div className="p-4 space-y-4">
                       {/* Apply to all slides toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-secondary border border-border">
+                      <div className="flex items-center justify-between">
                         <div>
                           <label className="text-sm font-medium">Apply to all slides</label>
                           <p className="text-xs text-muted-foreground">Apply this size to all slides</p>
@@ -2210,7 +2191,7 @@ export function CarouselGenerator(): JSX.Element {
                     /* Template Selection View */
                     <div className="p-4 space-y-4">
                       {/* Apply to all slides toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-secondary border border-border">
+                      <div className="flex items-center justify-between">
                         <div>
                           <label className="text-sm font-medium">Apply to all slides</label>
                           <p className="text-xs text-muted-foreground">Apply this template to all slides</p>
@@ -2322,7 +2303,7 @@ export function CarouselGenerator(): JSX.Element {
                     /* Layout Settings View */
                     <div className="p-4 space-y-6">
                       {/* Apply to all slides toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-secondary border border-border">
+                      <div className="flex items-center justify-between">
                         <div>
                           <label className="text-sm font-medium">Apply to all slides</label>
                           <p className="text-xs text-muted-foreground">Apply these settings to all slides</p>
@@ -2502,9 +2483,9 @@ export function CarouselGenerator(): JSX.Element {
                   ) : (
                     /* Default Edit Panel View */
                     <>
-                  <div className="px-4 py-3 border-b border-border">
+                  <div className="py-3 border-b border-border -mx-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-muted-foreground uppercase tracking-wide">Layers</span>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide px-4 block">Layers</span>
                     </div>
                   </div>
 

@@ -4,43 +4,6 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Light theme colors - improved contrast for WCAG AA compliance */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.1 0 0); /* Darker for better contrast (was 0.145) */
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.1 0 0); /* Darker for better contrast */
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.1 0 0); /* Darker for better contrast */
-  --primary: oklch(0.3 0 0); /* Visible for switches and buttons (was 0.25) */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.95 0 0); /* Slightly darker (was 0.97) */
-  --secondary-foreground: oklch(0.15 0 0); /* Darker for better contrast (was 0.205) */
-  --muted: oklch(0.95 0 0); /* Slightly darker (was 0.97) */
-  --muted-foreground: oklch(0.4 0 0); /* Much darker for better contrast (was 0.556) */
-  --accent: oklch(0.95 0 0); /* Slightly darker (was 0.97) */
-  --accent-foreground: oklch(0.15 0 0); /* Darker for better contrast (was 0.205) */
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.85 0 0); /* Darker for better visibility (was 0.922) */
-  --input: oklch(0.9 0 0); /* Darker for better visibility (was 0.922) */
-  --ring: oklch(0.6 0 0); /* Darker for better visibility (was 0.708) */
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.75rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.1 0 0); /* Darker for better contrast */
-  --sidebar-primary: oklch(0.15 0 0); /* Darker for better contrast */
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.95 0 0); /* Slightly darker */
-  --sidebar-accent-foreground: oklch(0.15 0 0); /* Darker for better contrast */
-  --sidebar-border: oklch(0.85 0 0); /* Darker for better visibility */
-  --sidebar-ring: oklch(0.6 0 0); /* Darker for better visibility */
-}
-
-.dark {
   /* Dark theme colors - improved contrast for WCAG AA compliance */
   --background: oklch(0.13 0 0);
   --foreground: oklch(0.98 0 0);
@@ -67,6 +30,7 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
+  --radius: 0.75rem;
   --sidebar: oklch(0.15 0 0);
   --sidebar-foreground: oklch(0.98 0 0);
   --sidebar-primary: oklch(0.4 0 0); /* Lighter for better contrast */
@@ -311,21 +275,23 @@ input[type="range"].slider {
 input[type="range"].slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: hsl(var(--foreground));
   cursor: pointer;
   border: 2px solid hsl(var(--border));
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 input[type="range"].slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: hsl(var(--foreground));
   cursor: pointer;
   border: 2px solid hsl(var(--border));
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 input[type="range"].slider::-webkit-slider-track {

@@ -1,3 +1,5 @@
+"use client"
+
 import type { Slide, Layer } from "@/lib/carousel-types"
 import { cn } from "@/lib/utils"
 import { Quote, RefreshCw } from "lucide-react"
