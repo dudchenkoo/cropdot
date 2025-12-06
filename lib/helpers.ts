@@ -249,10 +249,10 @@ export function getBackgroundStyle(background: Slide["background"]): React.CSSPr
     style.backgroundImage = `url(${background.photoUrl})`
     style.backgroundSize = "cover"
     style.backgroundPosition = "center"
-    // Apply overlay if specified
-    if (background.overlayColor && background.overlayOpacity !== undefined) {
-      const overlayRgba = hexToRgba(background.overlayColor, background.overlayOpacity)
-      style.backgroundImage = `linear-gradient(${overlayRgba}, ${overlayRgba}), url(${background.photoUrl})`
+    // Apply dark overlay if enabled
+    if (background.overlayEnabled && background.overlayOpacity !== undefined) {
+      const overlayOpacity = background.overlayOpacity
+      style.backgroundImage = `linear-gradient(rgba(0, 0, 0, ${overlayOpacity}), rgba(0, 0, 0, ${overlayOpacity})), url(${background.photoUrl})`
     }
   } else {
     style.backgroundColor = background.color || "#1a1a1a"

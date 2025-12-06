@@ -79,10 +79,13 @@ export function CarouselGenerator(): JSX.Element {
   const { theme } = useTheme()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const [windowSize, setWindowSize] = useState({ width: 1920, height: 1080 })
   const [history, setHistory] = useState<HistoryState<CarouselData | null>>(() => createHistory<CarouselData | null>(null, 50))
   const carouselData = history.present
-  const [isLoading, setIsLoading] = useState(false)
-  const [viewMode, setViewMode] = useState<"dashboard" | "creation">("dashboard")
+  // Carousel-specific state with prefixes for clarity and isolation
+  const [carouselIsLoading, setCarouselIsLoading] = useState(false)
+  const [postIsLoading, setPostIsLoading] = useState(false) // For PostForm when used in CarouselGenerator
+  const [carouselViewMode, setCarouselViewMode] = useState<"dashboard" | "creation">("dashboard")
   const [savedCarousels, setSavedCarousels] = useState<StoredCarousel[]>([])
   
   // Theme-aware dot pattern: light dots in dark mode, dark dots in light mode
@@ -92,26 +95,39 @@ export function CarouselGenerator(): JSX.Element {
     : mounted && theme === "light"
     ? `rgba(0, 0, 0, 0.03)`
     : `rgba(255, 255, 255, 0.08)` // Default to dark pattern until mounted
-  const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0)
-  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
-  const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null)
-  const [savedStatus, setSavedStatus] = useState<string | null>(null)
-  const [selectedAction, setSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | "info" | null>(null)
+  const [carouselSelectedSlideIndex, setCarouselSelectedSlideIndex] = useState<number>(0)
+  const [carouselSelectedLayerId, setCarouselSelectedLayerId] = useState<string | null>(null)
+  const [carouselDraggedLayerId, setCarouselDraggedLayerId] = useState<string | null>(null)
+  const [carouselSavedStatus, setCarouselSavedStatus] = useState<string | null>(null)
+  const [carouselSaveStatus, setCarouselSaveStatus] = useState<"saved" | "saving" | null>(null)
+  const [carouselSelectedAction, setCarouselSelectedAction] = useState<"export" | "template" | "background" | "text" | "layout" | "size" | "info" | null>(null)
   const [applyToAllSlides, setApplyToAllSlides] = useState(false)
   const actionPanelRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  const backgroundColorPickerRef = useRef<HTMLInputElement>(null)
+  const accentColorPickerRef = useRef<HTMLInputElement>(null)
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [carouselToDelete, setCarouselToDelete] = useState<StoredCarousel | null>(null)
-  const [contentType, setContentType] = useState<"carousel" | "post">("carousel")
+  const [contentType, setContentType] = useState<"carousel" | "post" | null>(null)
+  const [creationStep, setCreationStep] = useState<"select-type" | "form" | "results">("select-type")
 
   const commitCarouselChange = useCallback(
     (updatedData: CarouselData, statusMessage?: string) => {
+      // Set saving status
+      setCarouselSaveStatus("saving")
+      
       setHistory((current) => pushState(current, updatedData))
 
+      // Set saved status after a short delay
+      setTimeout(() => {
+        setCarouselSaveStatus("saved")
+        setTimeout(() => setCarouselSaveStatus(null), 2000)
+      }, 300)
+
       if (statusMessage) {
-        setSavedStatus(statusMessage)
-        setTimeout(() => setSavedStatus(null), 1500)
+        setCarouselSavedStatus(statusMessage)
+        setTimeout(() => setCarouselSavedStatus(null), 1500)
       }
     },
     [],
@@ -119,6 +135,21 @@ export function CarouselGenerator(): JSX.Element {
 
   useEffect(() => {
     setMounted(true)
+    
+    // Track window size for responsive texture
+    const updateWindowSize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      })
+    }
+    
+    updateWindowSize()
+    window.addEventListener("resize", updateWindowSize)
+    
+    return () => {
+      window.removeEventListener("resize", updateWindowSize)
+    }
   }, [])
 
   useEffect(() => {
@@ -135,9 +166,10 @@ export function CarouselGenerator(): JSX.Element {
         const parsed = JSON.parse(templateCarouselData)
         if (isCarouselData(parsed) && parsed.slides && parsed.slides.length > 0) {
           setHistory(createHistory(parsed, 50))
-          setSelectedSlideIndex(0)
-          setSelectedLayerId(null)
-          setViewMode("creation")
+          setCarouselSelectedSlideIndex(0)
+          setCarouselSelectedLayerId(null)
+          setCarouselViewMode("creation")
+          setCreationStep("results")
           // Clear the stored template data
           localStorage.removeItem("templateCarouselData")
         }
@@ -149,7 +181,7 @@ export function CarouselGenerator(): JSX.Element {
   }, [])
 
   useEffect(() => {
-    if (!selectedAction) return
+    if (!carouselSelectedAction) return
 
     const panel = actionPanelRef.current
     if (!panel) return
@@ -187,7 +219,7 @@ export function CarouselGenerator(): JSX.Element {
       document.removeEventListener("keydown", handleKeyDown)
       previousFocusRef.current?.focus()
     }
-  }, [selectedAction])
+  }, [carouselSelectedAction])
 
   const handleGenerate = (data: CarouselData): void => {
     const dataWithLayers = {
@@ -217,14 +249,15 @@ export function CarouselGenerator(): JSX.Element {
     }
 
     setHistory(createHistory(finalData, 50))
-    setSelectedSlideIndex(0)
-    setSelectedLayerId(null)
-    setViewMode("creation")
+    setCarouselSelectedSlideIndex(0)
+    setCarouselSelectedLayerId(null)
+    setCarouselViewMode("creation")
+    setCreationStep("results")
   }
 
   const handleSelectSlide = (index: number): void => {
-    setSelectedSlideIndex(index)
-    setSelectedLayerId(null)
+    setCarouselSelectedSlideIndex(index)
+    setCarouselSelectedLayerId(null)
   }
 
   const handleSaveCarousel = (): void => {
@@ -246,27 +279,27 @@ export function CarouselGenerator(): JSX.Element {
 
   const handleLoadCarouselSelection = (entry: StoredCarousel): void => {
     setHistory(createHistory(entry.data, 50))
-    setSelectedSlideIndex(0)
-    setSelectedLayerId(null)
-    setViewMode("creation")
+    setCarouselSelectedSlideIndex(0)
+    setCarouselSelectedLayerId(null)
+    setCarouselViewMode("creation")
     setIsLoadModalOpen(false)
   }
 
   const handleNewCarousel = (): void => {
-    setViewMode("dashboard")
+    setCarouselViewMode("dashboard")
     setHistory(createHistory(null, 50))
-    setSelectedSlideIndex(0)
-    setSelectedLayerId(null)
-    setSelectedAction(null)
+    setCarouselSelectedSlideIndex(0)
+    setCarouselSelectedLayerId(null)
+    setCarouselSelectedAction(null)
   }
 
   const handleStartNewGeneration = (): void => {
     // Clear carousel data to show the creation form
     setHistory(createHistory(null, 50))
-    setSelectedSlideIndex(0)
-    setSelectedLayerId(null)
-    setSelectedAction(null)
-    setViewMode("creation")
+    setCarouselSelectedSlideIndex(0)
+    setCarouselSelectedLayerId(null)
+    setCarouselSelectedAction(null)
+    setCarouselViewMode("creation")
   }
 
   const handleDeleteCarousel = (carousel: StoredCarousel, e: React.MouseEvent): void => {
@@ -309,27 +342,27 @@ export function CarouselGenerator(): JSX.Element {
         })
       }
     }
-    setViewMode("dashboard")
+    setCarouselViewMode("dashboard")
   }
 
   const handleNavigateSlide = (direction: "next" | "previous"): void => {
-    if (!carouselData || viewMode !== "creation") return
+    if (!carouselData || carouselViewMode !== "creation") return
 
     const totalSlides = carouselData.slides.length
     const newIndex =
       direction === "next"
-        ? Math.min(totalSlides - 1, selectedSlideIndex + 1)
-        : Math.max(0, selectedSlideIndex - 1)
+        ? Math.min(totalSlides - 1, carouselSelectedSlideIndex + 1)
+        : Math.max(0, carouselSelectedSlideIndex - 1)
 
-    if (newIndex !== selectedSlideIndex) {
-      setSelectedSlideIndex(newIndex)
-      setSelectedLayerId(null)
+    if (newIndex !== carouselSelectedSlideIndex) {
+      setCarouselSelectedSlideIndex(newIndex)
+      setCarouselSelectedLayerId(null)
     }
   }
 
   const handleDeleteCurrentSlide = (): void => {
-    if (!carouselData || viewMode !== "creation" || carouselData.slides.length <= 1) return
-    handleDeleteSlide(selectedSlideIndex)
+    if (!carouselData || carouselViewMode !== "creation" || carouselData.slides.length <= 1) return
+    handleDeleteSlide(carouselSelectedSlideIndex)
   }
 
   const updateCarouselData = (updatedData: CarouselData, statusMessage?: string): void => {
@@ -339,21 +372,21 @@ export function CarouselGenerator(): JSX.Element {
 
   useEffect(() => {
     if (!carouselData) {
-      setSelectedSlideIndex(0)
-      setSelectedLayerId(null)
+      setCarouselSelectedSlideIndex(0)
+      setCarouselSelectedLayerId(null)
       return
     }
 
     const maxIndex = Math.max(0, carouselData.slides.length - 1)
-    if (selectedSlideIndex > maxIndex) {
-      setSelectedSlideIndex(maxIndex)
+    if (carouselSelectedSlideIndex > maxIndex) {
+      setCarouselSelectedSlideIndex(maxIndex)
     }
 
-    const slide = carouselData.slides[Math.min(selectedSlideIndex, maxIndex)]
-    if (selectedLayerId && !slide?.layers.some((layer) => layer.id === selectedLayerId)) {
-      setSelectedLayerId(null)
+    const slide = carouselData.slides[Math.min(carouselSelectedSlideIndex, maxIndex)]
+    if (carouselSelectedLayerId && !slide?.layers.some((layer) => layer.id === carouselSelectedLayerId)) {
+      setCarouselSelectedLayerId(null)
     }
-  }, [carouselData, selectedLayerId, selectedSlideIndex])
+  }, [carouselData, carouselSelectedLayerId, carouselSelectedSlideIndex])
 
   const handleUndo = useCallback(() => {
     setHistory((current) => {
@@ -537,7 +570,7 @@ export function CarouselGenerator(): JSX.Element {
     })
     const updatedData = { ...carouselData, slides: updatedSlides }
     updateCarouselData(updatedData)
-    if (selectedLayerId === layerId) setSelectedLayerId(null)
+    if (carouselSelectedLayerId === layerId) setCarouselSelectedLayerId(null)
   }
 
   const handleAddLayer = (slideIndex: number, type: Layer["type"]): void => {
@@ -566,7 +599,7 @@ export function CarouselGenerator(): JSX.Element {
     })
     const updatedData = { ...carouselData, slides: updatedSlides }
     updateCarouselData(updatedData)
-    setSelectedLayerId(newLayer.id)
+    setCarouselSelectedLayerId(newLayer.id)
   }
 
   const handleDeleteLayer = (slideIndex: number, layerId: string): void => {
@@ -582,7 +615,7 @@ export function CarouselGenerator(): JSX.Element {
     })
     const updatedData = { ...carouselData, slides: updatedSlides }
     updateCarouselData(updatedData)
-    if (selectedLayerId === layerId) setSelectedLayerId(null)
+    if (carouselSelectedLayerId === layerId) setCarouselSelectedLayerId(null)
   }
 
   const handleAddSlide = (afterIndex: number): void => {
@@ -612,8 +645,8 @@ export function CarouselGenerator(): JSX.Element {
     ]
     const updatedData = { ...carouselData, slides: updatedSlides }
     updateCarouselData(updatedData)
-    setSelectedSlideIndex(afterIndex + 1)
-    setSelectedLayerId(null)
+    setCarouselSelectedSlideIndex(afterIndex + 1)
+    setCarouselSelectedLayerId(null)
   }
 
   const handleDuplicateSlide = (slideIndex: number): void => {
@@ -643,8 +676,8 @@ export function CarouselGenerator(): JSX.Element {
     
     const updatedData = { ...carouselData, slides: updatedSlides }
     updateCarouselData(updatedData, "Slide duplicated")
-    setSelectedSlideIndex(slideIndex + 1)
-    setSelectedLayerId(null)
+    setCarouselSelectedSlideIndex(slideIndex + 1)
+    setCarouselSelectedLayerId(null)
   }
 
   const handleDeleteSlide = (slideIndex: number): void => {
@@ -658,20 +691,20 @@ export function CarouselGenerator(): JSX.Element {
       }))
     
     // Adjust selected slide index
-    let newSelectedIndex = selectedSlideIndex
-    if (slideIndex < selectedSlideIndex) {
+    let newSelectedIndex = carouselSelectedSlideIndex
+    if (slideIndex < carouselSelectedSlideIndex) {
       // If we deleted a slide before the current one, no change needed
-      newSelectedIndex = selectedSlideIndex - 1
-    } else if (slideIndex === selectedSlideIndex) {
+      newSelectedIndex = carouselSelectedSlideIndex - 1
+    } else if (slideIndex === carouselSelectedSlideIndex) {
       // If we deleted the current slide, go to the previous one (or stay at 0)
-      newSelectedIndex = Math.max(0, selectedSlideIndex - 1)
+      newSelectedIndex = Math.max(0, carouselSelectedSlideIndex - 1)
     }
     // If we deleted a slide after the current one, no change needed
     
     const updatedData = { ...carouselData, slides: updatedSlides }
     updateCarouselData(updatedData)
-    setSelectedSlideIndex(newSelectedIndex)
-    setSelectedLayerId(null)
+    setCarouselSelectedSlideIndex(newSelectedIndex)
+    setCarouselSelectedLayerId(null)
   }
 
   const handleReorderSlides = (fromIndex: number, toIndex: number): void => {
@@ -688,23 +721,23 @@ export function CarouselGenerator(): JSX.Element {
     }))
     
     // Update selected slide index if needed
-    let newSelectedIndex = selectedSlideIndex
-    if (fromIndex === selectedSlideIndex) {
+    let newSelectedIndex = carouselSelectedSlideIndex
+    if (fromIndex === carouselSelectedSlideIndex) {
       newSelectedIndex = toIndex
-    } else if (fromIndex < selectedSlideIndex && toIndex >= selectedSlideIndex) {
-      newSelectedIndex = selectedSlideIndex - 1
-    } else if (fromIndex > selectedSlideIndex && toIndex <= selectedSlideIndex) {
-      newSelectedIndex = selectedSlideIndex + 1
+    } else if (fromIndex < carouselSelectedSlideIndex && toIndex >= carouselSelectedSlideIndex) {
+      newSelectedIndex = carouselSelectedSlideIndex - 1
+    } else if (fromIndex > carouselSelectedSlideIndex && toIndex <= carouselSelectedSlideIndex) {
+      newSelectedIndex = carouselSelectedSlideIndex + 1
     }
     
     const updatedData = { ...carouselData, slides: reindexedSlides }
     updateCarouselData(updatedData)
-    setSelectedSlideIndex(newSelectedIndex)
-    setSelectedLayerId(null)
+    setCarouselSelectedSlideIndex(newSelectedIndex)
+    setCarouselSelectedLayerId(null)
   }
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, layerId: string): void => {
-    setDraggedLayerId(layerId)
+    setCarouselDraggedLayerId(layerId)
     e.dataTransfer.effectAllowed = "move"
   }
 
@@ -715,15 +748,15 @@ export function CarouselGenerator(): JSX.Element {
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetLayerId: string): void => {
     e.preventDefault()
-    if (!carouselData || !draggedLayerId || draggedLayerId === targetLayerId) {
-      setDraggedLayerId(null)
+    if (!carouselData || !carouselDraggedLayerId || carouselDraggedLayerId === targetLayerId) {
+      setCarouselDraggedLayerId(null)
       return
     }
 
     const updatedSlides = carouselData.slides.map((slide, index) => {
-      if (index === selectedSlideIndex) {
+      if (index === carouselSelectedSlideIndex) {
         const layers = [...slide.layers]
-        const draggedIndex = layers.findIndex((l) => l.id === draggedLayerId)
+        const draggedIndex = layers.findIndex((l) => l.id === carouselDraggedLayerId)
         const targetIndex = layers.findIndex((l) => l.id === targetLayerId)
 
         if (draggedIndex !== -1 && targetIndex !== -1) {
@@ -740,33 +773,33 @@ export function CarouselGenerator(): JSX.Element {
     const updatedData = { ...carouselData, slides: updatedSlides }
     updateCarouselData(updatedData)
 
-    setDraggedLayerId(null)
+    setCarouselDraggedLayerId(null)
   }
 
   const handleDragEnd = (): void => {
-    setDraggedLayerId(null)
+    setCarouselDraggedLayerId(null)
   }
 
   const handleSelectLayer = (layerId: string): void => {
-    setSelectedLayerId(layerId)
+    setCarouselSelectedLayerId(layerId)
   }
 
-  const currentSlide = carouselData?.slides[selectedSlideIndex]
-  const selectedLayer = currentSlide?.layers.find((l) => l.id === selectedLayerId)
+  const currentSlide = carouselData?.slides[carouselSelectedSlideIndex]
+  const selectedLayer = currentSlide?.layers.find((l) => l.id === carouselSelectedLayerId)
 
-  // Dashboard view - show when viewMode is dashboard
-  if (viewMode === "dashboard") {
+  // Dashboard view - show when carouselViewMode is dashboard
+  if (carouselViewMode === "dashboard") {
     return (
       <TooltipProvider delayDuration={300} skipDelayDuration={0}>
         <ErrorBoundary componentName="CarouselGenerator">
         <div className={`flex h-screen overflow-hidden ${interTight.variable}`}>
           <div className="flex flex-1 flex-col overflow-hidden">
-            <Header subtitle={undefined} onBack={undefined} onLogoClick={() => setViewMode("dashboard")} />
+            <Header subtitle={undefined} onBack={undefined} onLogoClick={() => setCarouselViewMode("dashboard")} />
 
             <div className="flex flex-1 flex-col overflow-hidden">
             {/* Dashboard Title Section - only show if we have LinkedIn posts */}
             {savedCarousels.length > 0 && (
-              <div className="border-b border-border px-6 py-4 bg-background">
+              <div className="carousel-dashboard-title border-b border-border px-6 py-4 bg-background" data-carousel-section="dashboard-title">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">{savedCarousels.length} LinkedIn posts</span>
@@ -816,25 +849,26 @@ export function CarouselGenerator(): JSX.Element {
 
               {savedCarousels.length === 0 ? (
                 <div 
-                  className="relative z-10 flex flex-col items-center justify-center h-full pb-20"
-                  style={{
-                    backgroundColor: "#000000",
-                  }}
+                  className="relative z-10 flex flex-col items-center justify-center h-full pb-20 bg-background"
                 >
                   <div
                     className="absolute inset-0 pointer-events-none"
                     style={{
                       backgroundImage: "url('/bg-texture.png')",
-                      backgroundSize: "cover",
+                      backgroundSize: mounted 
+                        ? `${Math.max(windowSize.width, windowSize.height) * 0.8}px ${Math.max(windowSize.width, windowSize.height) * 0.8}px`
+                        : "cover",
                       backgroundPosition: "center",
                       backgroundRepeat: "repeat",
-                      opacity: 0.1,
+                      opacity: mounted && theme === "dark" ? 0.05 : 0.02,
                     }}
                   />
                   <div
                     className="absolute inset-0 pointer-events-none"
                     style={{
-                      background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 50%)",
+                      background: mounted && theme === "dark" 
+                        ? "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 50%)"
+                        : "radial-gradient(circle at 50% 50%, rgba(0,0,0,0.02) 0%, transparent 50%)",
                     }}
                   />
 
@@ -853,7 +887,9 @@ export function CarouselGenerator(): JSX.Element {
                   <h2
                     className="text-2xl md:text-3xl mb-3 bg-clip-text text-transparent font-semibold text-center"
                     style={{
-                      backgroundImage: "linear-gradient(to bottom, #ffffff, #888888)",
+                      backgroundImage: mounted && theme === "dark"
+                        ? "linear-gradient(to bottom, #ffffff, #888888)"
+                        : "linear-gradient(to bottom, #1a1a1a, #666666)",
                       fontFamily: "var(--font-lora), serif",
                     }}
                   >
@@ -1020,7 +1056,7 @@ export function CarouselGenerator(): JSX.Element {
     )
   }
 
-  // Creation view - show when viewMode is creation
+  // Creation view - show when carouselViewMode is creation
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={0}>
       <ErrorBoundary componentName="CarouselGenerator">
@@ -1028,23 +1064,29 @@ export function CarouselGenerator(): JSX.Element {
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header
             topic={carouselData?.topic}
-            onBack={() => setViewMode("dashboard")}
-            onLogoClick={() => setViewMode("dashboard")}
+            onBack={() => setCarouselViewMode("dashboard")}
+            onLogoClick={() => setCarouselViewMode("dashboard")}
+            carouselSaveStatus={carouselSaveStatus}
           />
 
           <div className="flex flex-1 overflow-hidden">
             <section
               className="flex-1 overflow-auto relative bg-background"
             >
-              <div
-                className="absolute inset-0 pointer-events-none opacity-[0.15]"
-                style={{
-                  backgroundImage: "url('/1_2.png')",
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  backgroundRepeat: "no-repeat",
-                }}
-              />
+              {carouselData && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundImage: "url('/bg-texture.png')",
+                    backgroundSize: mounted 
+                      ? `${Math.max(windowSize.width, windowSize.height) * 0.8}px ${Math.max(windowSize.width, windowSize.height) * 0.8}px`
+                      : "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "repeat",
+                    opacity: mounted && theme === "dark" ? 0.05 : 0.02,
+                  }}
+                />
+              )}
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
@@ -1052,17 +1094,17 @@ export function CarouselGenerator(): JSX.Element {
                 }}
               />
 
-              {carouselData ? (
+              {carouselData && creationStep === "results" ? (
                 <>
                   <div className="relative z-10 flex items-center justify-center min-h-full pb-24">
                     <ErrorBoundary componentName="CarouselPreview">
                       <CarouselPreview
                         data={carouselData}
-                        isLoading={isLoading}
-                        currentSlide={selectedSlideIndex}
+                        carouselIsLoading={carouselIsLoading}
+                        currentSlide={carouselSelectedSlideIndex}
                         onSlideChange={(index) => {
-                          setSelectedSlideIndex(index)
-                          setSelectedLayerId(null)
+                          setCarouselSelectedSlideIndex(index)
+                          setCarouselSelectedLayerId(null)
                         }}
                         onAddSlide={handleAddSlide}
                         onDeleteSlide={handleDeleteSlide}
@@ -1083,12 +1125,12 @@ export function CarouselGenerator(): JSX.Element {
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         aria-label="Open template settings"
-                        onClick={() => setSelectedAction(selectedAction === "template" ? null : "template")}
+                        onClick={() => setCarouselSelectedAction(carouselSelectedAction === "template" ? null : "template")}
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
-                          selectedAction === "template"
-                            ? "text-white"
-                            : "text-muted-foreground hover:text-white hover:bg-white/5"
+                          carouselSelectedAction === "template"
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                         )}
                       >
                         <Grid3x3 className="w-4 h-4" />
@@ -1097,13 +1139,13 @@ export function CarouselGenerator(): JSX.Element {
                       <button
                         aria-label="Open background settings"
                         onClick={() => {
-                          setSelectedAction("background")
+                          setCarouselSelectedAction("background")
                         }}
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
-                          selectedAction === "background"
-                            ? "text-white"
-                            : "text-muted-foreground hover:text-white hover:bg-white/5"
+                          carouselSelectedAction === "background"
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                         )}
                       >
                         <PaintBucket className="w-4 h-4" />
@@ -1113,14 +1155,14 @@ export function CarouselGenerator(): JSX.Element {
                         aria-label="Open text styling"
                         onClick={() => {
                           if (selectedLayer) {
-                            setSelectedAction(selectedAction === "text" ? null : "text")
+                            setCarouselSelectedAction(carouselSelectedAction === "text" ? null : "text")
                           }
                         }}
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
-                          selectedAction === "text" && selectedLayer
-                            ? "text-white"
-                            : "text-muted-foreground hover:text-white hover:bg-white/5"
+                          carouselSelectedAction === "text" && selectedLayer
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                         )}
                         disabled={!selectedLayer}
                       >
@@ -1129,12 +1171,12 @@ export function CarouselGenerator(): JSX.Element {
                       </button>
                       <button
                         aria-label="Open layout settings"
-                        onClick={() => setSelectedAction(selectedAction === "layout" ? null : "layout")}
+                        onClick={() => setCarouselSelectedAction(carouselSelectedAction === "layout" ? null : "layout")}
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
-                          selectedAction === "layout"
-                            ? "text-white"
-                            : "text-muted-foreground hover:text-white hover:bg-white/5"
+                          carouselSelectedAction === "layout"
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                         )}
                       >
                         <Layout className="w-4 h-4" />
@@ -1142,12 +1184,12 @@ export function CarouselGenerator(): JSX.Element {
                       </button>
                       <button
                         aria-label="Open size settings"
-                        onClick={() => setSelectedAction(selectedAction === "size" ? null : "size")}
+                        onClick={() => setCarouselSelectedAction(carouselSelectedAction === "size" ? null : "size")}
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
-                          selectedAction === "size"
-                            ? "text-white"
-                            : "text-muted-foreground hover:text-white hover:bg-white/5"
+                          carouselSelectedAction === "size"
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                         )}
                       >
                         <Maximize2 className="w-4 h-4" />
@@ -1155,12 +1197,12 @@ export function CarouselGenerator(): JSX.Element {
                       </button>
                       <button
                         aria-label="Open info settings"
-                        onClick={() => setSelectedAction(selectedAction === "info" ? null : "info")}
+                        onClick={() => setCarouselSelectedAction(carouselSelectedAction === "info" ? null : "info")}
                         className={cn(
                           "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded transition-colors",
-                          selectedAction === "info"
-                            ? "text-white"
-                            : "text-muted-foreground hover:text-white hover:bg-white/5"
+                          carouselSelectedAction === "info"
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                         )}
                       >
                         <Info className="w-4 h-4" />
@@ -1168,18 +1210,12 @@ export function CarouselGenerator(): JSX.Element {
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                        {savedStatus && (
-                          <span className="flex items-center gap-1.5 text-xs text-green-400">
-                            <Check className="w-3 h-3" />
-                            {savedStatus}
-                          </span>
-                        )}
                         <button
                           aria-label="Toggle export options"
-                          onClick={() => setSelectedAction(selectedAction === "export" ? null : "export")}
+                          onClick={() => setCarouselSelectedAction(carouselSelectedAction === "export" ? null : "export")}
                           className={cn(
                             "px-4 py-2 rounded-lg border border-border bg-background hover:bg-secondary text-foreground text-sm font-medium transition-colors",
-                            selectedAction === "export"
+                            carouselSelectedAction === "export"
                               ? "bg-primary text-primary-foreground border-primary"
                               : ""
                           )}
@@ -1199,10 +1235,11 @@ export function CarouselGenerator(): JSX.Element {
                 </div>
 
               </>
-            ) : !isLoading ? (
+            ) : !carouselIsLoading && !(carouselData && creationStep === "results") ? (
               <div className="relative z-10 flex items-center justify-center min-h-full">
                 <div className="w-full max-w-2xl mx-auto px-6 py-12">
-                  <div className="text-center mb-8">
+                  {/* Common header section - always visible to prevent jumping */}
+                  <div className="text-center mb-8 min-h-[200px] flex flex-col justify-start">
                     <h1
                       className="text-2xl md:text-3xl mb-4 bg-clip-text text-transparent font-semibold"
                       style={{
@@ -1212,62 +1249,172 @@ export function CarouselGenerator(): JSX.Element {
                     >
                       Create High-Performing LinkedIn Content
                     </h1>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto mb-8">
                       Our LinkedIn specialization helps you create engaging posts that drive results. Optimized for maximum performance.
                     </p>
                     
-                    {/* Content Type Selector */}
-                    <div className="flex items-center justify-center gap-2 mb-6">
-                      <button
-                        type="button"
-                        onClick={() => setContentType("carousel")}
-                        className={cn(
-                          "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                          contentType === "carousel"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
-                        )}
-                      >
-                        Carousel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setContentType("post")}
-                        className={cn(
-                          "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                          contentType === "post"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
-                        )}
-                      >
-                        Text Post
-                      </button>
-                    </div>
+                    {/* Stepper */}
+                    <div className="flex items-center justify-center mb-8">
+                        <div className="flex items-center gap-2">
+                          {/* Step 1 */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (creationStep === "form" || creationStep === "results") {
+                                setCreationStep("select-type")
+                                setContentType(null)
+                              }
+                            }}
+                            disabled={creationStep === "select-type"}
+                            className={cn(
+                              "flex items-center transition-opacity",
+                              creationStep === "select-type" ? "cursor-default opacity-100" : "cursor-pointer hover:opacity-80"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                              creationStep === "select-type" 
+                                ? "bg-primary text-primary-foreground" 
+                                : creationStep === "form" || creationStep === "results"
+                                ? "bg-primary/20 text-primary border-2 border-primary"
+                                : "bg-secondary text-muted-foreground"
+                            )}>
+                              {creationStep === "select-type" ? "1" : "✓"}
+                            </div>
+                            <div className={cn(
+                              "ml-2 text-sm font-medium",
+                              creationStep === "select-type" ? "text-foreground" : "text-muted-foreground"
+                            )}>
+                              Choose Type
+                            </div>
+                          </button>
+                          
+                          {/* Connector */}
+                          <div className={cn(
+                            "w-12 h-0.5 mx-4 transition-colors",
+                            creationStep === "form" || creationStep === "results" ? "bg-primary" : "bg-border"
+                          )} />
+                          
+                          {/* Step 2 */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (creationStep === "results" && contentType) {
+                                setCreationStep("form")
+                              }
+                            }}
+                            disabled={creationStep !== "results"}
+                            className={cn(
+                              "flex items-center transition-opacity",
+                              creationStep === "results" ? "cursor-pointer hover:opacity-80" : "cursor-default opacity-100"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                              creationStep === "form"
+                                ? "bg-primary text-primary-foreground"
+                                : creationStep === "results"
+                                ? "bg-primary/20 text-primary border-2 border-primary"
+                                : "bg-secondary text-muted-foreground"
+                            )}>
+                              {creationStep === "results" ? "✓" : "2"}
+                            </div>
+                            <div className={cn(
+                              "ml-2 text-sm font-medium",
+                              creationStep === "form" ? "text-foreground" : "text-muted-foreground"
+                            )}>
+                              Details
+                            </div>
+                          </button>
+                          
+                          {/* Connector */}
+                          <div className={cn(
+                            "w-12 h-0.5 mx-4 transition-colors",
+                            creationStep === "results" ? "bg-primary" : "bg-border"
+                          )} />
+                          
+                          {/* Step 3 */}
+                          <div className="flex items-center">
+                            <div className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                              creationStep === "results"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-secondary text-muted-foreground"
+                            )}>
+                              3
+                            </div>
+                            <div className={cn(
+                              "ml-2 text-sm font-medium",
+                              creationStep === "results" ? "text-foreground" : "text-muted-foreground"
+                            )}>
+                              Results
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                   </div>
-                  <ErrorBoundary componentName={contentType === "carousel" ? "CarouselForm" : "PostForm"}>
-                    {contentType === "carousel" ? (
-                      <CarouselForm onGenerate={handleGenerate} isLoading={isLoading} setIsLoading={setIsLoading} />
-                    ) : (
-                      <PostForm 
-                        onGenerate={(data: PostGenerationResponse) => {
-                          // Store post data and redirect to post view
-                          if (typeof window !== "undefined") {
-                            localStorage.setItem("generatedPostData", JSON.stringify(data))
-                            router.push("/dashboard/post")
-                          }
-                        }} 
-                        isLoading={isLoading} 
-                        setIsLoading={setIsLoading} 
-                      />
-                    )}
-                  </ErrorBoundary>
+                  
+                  {creationStep === "select-type" ? (
+                    <div className="text-center min-h-[300px] flex flex-col justify-center">
+                      {/* Content Type Selector - Step 1 */}
+                      <div className="flex items-stretch justify-center gap-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setContentType("carousel")
+                            setCreationStep("form")
+                          }}
+                          className="flex-1 max-w-xs px-8 py-6 rounded-lg bg-secondary hover:bg-secondary/80 border border-border transition-colors text-left group"
+                        >
+                          <div className="text-lg font-semibold mb-2">Carousel</div>
+                          <div className="text-sm text-muted-foreground">
+                            Create multi-slide carousels with AI-powered content
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setContentType("post")
+                            setCreationStep("form")
+                          }}
+                          className="flex-1 max-w-xs px-8 py-6 rounded-lg bg-secondary hover:bg-secondary/80 border border-border transition-colors text-left group"
+                        >
+                          <div className="text-lg font-semibold mb-2">Text Post</div>
+                          <div className="text-sm text-muted-foreground">
+                            Generate engaging LinkedIn text posts
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  ) : creationStep === "form" && contentType ? (
+                    <div className="min-h-[300px]">
+                      <ErrorBoundary componentName={contentType === "carousel" ? "CarouselForm" : "PostForm"}>
+                        {contentType === "carousel" ? (
+                          <CarouselForm onGenerate={handleGenerate} isLoading={carouselIsLoading} setIsLoading={setCarouselIsLoading} />
+                        ) : (
+                          <PostForm 
+                            onGenerate={(data: PostGenerationResponse) => {
+                              // Store post data and redirect to post view
+                              if (typeof window !== "undefined") {
+                                localStorage.setItem("generatedPostData", JSON.stringify(data))
+                                router.push("/dashboard/post")
+                              }
+                            }} 
+                            isLoading={postIsLoading}
+                            setIsLoading={setPostIsLoading} 
+                            setCarouselIsLoading={setCarouselIsLoading} 
+                          />
+                        )}
+                      </ErrorBoundary>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ) : (
               <div className="relative z-10 flex items-center justify-center h-full">
                 <div className="text-center" role="status" aria-live="assertive">
-                  <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-sm text-white/50">Generating your carousel...</p>
+                  <div className="w-8 h-8 border-2 border-border border-t-foreground rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-sm text-muted-foreground">Generating your carousel...</p>
                 </div>
               </div>
             )}
@@ -1278,31 +1425,31 @@ export function CarouselGenerator(): JSX.Element {
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between border-b border-border px-4 py-3">
                   <div className="flex items-center gap-2">
-                    {selectedAction && (
+                    {carouselSelectedAction && (
                       <button
                         aria-label="Close settings"
                         onClick={() => {
-                          setSelectedAction(null)
+                          setCarouselSelectedAction(null)
                         }}
-                        className="p-1 rounded hover:bg-white/10 transition-colors"
+                        className="p-1 rounded hover:bg-secondary transition-colors"
                       >
                         <ArrowLeft className="w-4 h-4 text-muted-foreground" />
                       </button>
                     )}
                     <span className="text-sm font-medium">
-                      {selectedAction === "text" ? "Text Styling" :
-                       selectedAction === "background" ? "Background Settings" :
-                       selectedAction === "template" ? "Template" :
-                       selectedAction === "layout" ? "Layout" :
-                       selectedAction === "size" ? "Size" :
-                       selectedAction === "info" ? "Info" :
+                      {carouselSelectedAction === "text" ? "Text Styling" :
+                       carouselSelectedAction === "background" ? "Background Settings" :
+                       carouselSelectedAction === "template" ? "Template" :
+                       carouselSelectedAction === "layout" ? "Layout" :
+                       carouselSelectedAction === "size" ? "Size" :
+                       carouselSelectedAction === "info" ? "Info" :
                        "Edit slide"}
                     </span>
                   </div>
                     <div className="flex items-center gap-2">
-                      {!selectedAction && (
+                      {!carouselSelectedAction && (
                         <span className="text-xs text-muted-foreground">
-                          {selectedSlideIndex + 1} / {carouselData.slides.length}
+                          {carouselSelectedSlideIndex + 1} / {carouselData.slides.length}
                         </span>
                       )}
                       <div className="flex items-center gap-1">
@@ -1344,24 +1491,24 @@ export function CarouselGenerator(): JSX.Element {
 
                 <div className="flex-1 overflow-auto" ref={actionPanelRef}>
                   {/* Text Styling View */}
-                  {selectedAction === "text" && selectedLayer ? (
+                  {carouselSelectedAction === "text" && selectedLayer ? (
                     <div className="p-4 space-y-4">
                       {/* Text Formatting Toolbar */}
-                      <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="p-3 rounded-lg bg-secondary border border-border">
                         <div className="flex items-center gap-1">
                           {/* Bold */}
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
                                 aria-label="Toggle bold"
-                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                onClick={() => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { 
                                   bold: !selectedLayer.style?.bold 
                                 })}
                                 className={cn(
                                   "p-2 rounded transition-colors",
                                   selectedLayer.style?.bold
                                     ? "bg-accent/20 text-accent"
-                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                 )}
                               >
                                 <Bold className="w-4 h-4" />
@@ -1377,14 +1524,14 @@ export function CarouselGenerator(): JSX.Element {
                             <TooltipTrigger asChild>
                               <button
                                 aria-label="Toggle italic"
-                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                onClick={() => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { 
                                   italic: !selectedLayer.style?.italic 
                                 })}
                                 className={cn(
                                   "p-2 rounded transition-colors",
                                   selectedLayer.style?.italic
                                     ? "bg-accent/20 text-accent"
-                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                 )}
                               >
                                 <Italic className="w-4 h-4" />
@@ -1400,14 +1547,14 @@ export function CarouselGenerator(): JSX.Element {
                             <TooltipTrigger asChild>
                               <button
                                 aria-label="Toggle underline"
-                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                onClick={() => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { 
                                   underline: !selectedLayer.style?.underline 
                                 })}
                                 className={cn(
                                   "p-2 rounded transition-colors",
                                   selectedLayer.style?.underline
                                     ? "bg-accent/20 text-accent"
-                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                 )}
                               >
                                 <Underline className="w-4 h-4" />
@@ -1423,14 +1570,14 @@ export function CarouselGenerator(): JSX.Element {
                             <TooltipTrigger asChild>
                               <button
                                 aria-label="Toggle strikethrough"
-                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                onClick={() => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { 
                                   strikethrough: !selectedLayer.style?.strikethrough 
                                 })}
                                 className={cn(
                                   "p-2 rounded transition-colors",
                                   selectedLayer.style?.strikethrough
                                     ? "bg-accent/20 text-accent"
-                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                 )}
                               >
                                 <Strikethrough className="w-4 h-4" />
@@ -1442,21 +1589,21 @@ export function CarouselGenerator(): JSX.Element {
                           </Tooltip>
                           
                           {/* Separator */}
-                          <div className="w-px h-6 bg-white/10 mx-1" />
+                          <div className="w-px h-6 bg-border mx-1" />
                           
                           {/* Numbered List */}
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
                                 aria-label="Toggle numbered list"
-                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                onClick={() => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { 
                                   listType: selectedLayer.style?.listType === "ordered" ? null : "ordered"
                                 })}
                                 className={cn(
                                   "p-2 rounded transition-colors",
                                   selectedLayer.style?.listType === "ordered"
                                     ? "bg-accent/20 text-accent"
-                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                 )}
                               >
                                 <ListOrdered className="w-4 h-4" />
@@ -1472,14 +1619,14 @@ export function CarouselGenerator(): JSX.Element {
                             <TooltipTrigger asChild>
                               <button
                                 aria-label="Toggle bulleted list"
-                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                onClick={() => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { 
                                   listType: selectedLayer.style?.listType === "unordered" ? null : "unordered"
                                 })}
                                 className={cn(
                                   "p-2 rounded transition-colors",
                                   selectedLayer.style?.listType === "unordered"
                                     ? "bg-accent/20 text-accent"
-                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                 )}
                               >
                                 <List className="w-4 h-4" />
@@ -1498,15 +1645,15 @@ export function CarouselGenerator(): JSX.Element {
                           <input
                             type="color"
                             value={selectedLayer.style?.highlightColor || DEFAULT_HIGHLIGHT_COLOR}
-                            onChange={(e) => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { highlightColor: e.target.value })}
-                            className="w-12 h-10 rounded border border-white/10 bg-white/5 cursor-pointer"
+                            onChange={(e) => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { highlightColor: e.target.value })}
+                            className="w-12 h-10 rounded border border-border bg-secondary cursor-pointer"
                             aria-label="Select highlight color"
                           />
                           <input
                             type="text"
                             value={selectedLayer.style?.highlightColor || DEFAULT_HIGHLIGHT_COLOR}
-                            onChange={(e) => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { highlightColor: e.target.value })}
-                            className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
+                            onChange={(e) => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { highlightColor: e.target.value })}
+                              className="flex-1 px-3 py-2 rounded bg-secondary border border-border text-sm focus:outline-none focus:border-ring"
                             placeholder={DEFAULT_HIGHLIGHT_COLOR}
                             aria-label="Highlight color value"
                           />
@@ -1522,12 +1669,12 @@ export function CarouselGenerator(): JSX.Element {
                               <button
                                 aria-label={`Set font family ${font}`}
                                 key={font}
-                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { fontFamily: font })}
+                                onClick={() => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { fontFamily: font })}
                                 className={cn(
                                   "px-3 py-3 rounded-lg border transition-all text-center flex items-center justify-center",
                                   isSelected
                                     ? "bg-accent/20 border-accent text-accent"
-                                    : "bg-white/5 border-white/10 hover:bg-white/10"
+                                    : "bg-secondary border-border hover:bg-muted"
                                 )}
                               >
                                 <div 
@@ -1546,8 +1693,8 @@ export function CarouselGenerator(): JSX.Element {
                         <label className="text-sm text-muted-foreground">Font Size</label>
                           <select
                             value={selectedLayer.style?.fontSize || DEFAULT_FONT_SIZE}
-                            onChange={(e) => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { fontSize: e.target.value })}
-                            className="w-full px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20 cursor-pointer"
+                            onChange={(e) => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { fontSize: e.target.value })}
+                              className="w-full px-3 py-2 rounded bg-secondary border border-border text-sm focus:outline-none focus:border-ring cursor-pointer"
                           >
                             {FONT_SIZE_OPTIONS.map((size) => (
                               <option key={size} value={size}>
@@ -1574,48 +1721,48 @@ export function CarouselGenerator(): JSX.Element {
                         <div className="flex items-center gap-2">
                           <button
                             aria-label="Capitalize text"
-                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { textTransform: "capitalize" })}
+                            onClick={() => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { textTransform: "capitalize" })}
                             className={cn(
                               "flex-1 px-4 py-2 rounded text-sm border transition-colors",
                               selectedLayer.style?.textTransform === "capitalize"
-                                ? "bg-white/10 border-white/30 text-white"
-                                : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10"
+                                ? "bg-secondary border-border text-foreground"
+                                : "bg-secondary border-border text-muted-foreground hover:bg-muted"
                             )}
                           >
                             Aa
                           </button>
                           <button
                             aria-label="Uppercase text"
-                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { textTransform: "uppercase" })}
+                            onClick={() => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { textTransform: "uppercase" })}
                             className={cn(
                               "flex-1 px-4 py-2 rounded text-sm border transition-colors",
                               selectedLayer.style?.textTransform === "uppercase"
-                                ? "bg-white/10 border-white/30 text-white"
-                                : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10"
+                                ? "bg-secondary border-border text-foreground"
+                                : "bg-secondary border-border text-muted-foreground hover:bg-muted"
                             )}
                           >
                             AA
                           </button>
                           <button
                             aria-label="Lowercase text"
-                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { textTransform: "lowercase" })}
+                            onClick={() => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { textTransform: "lowercase" })}
                             className={cn(
                               "flex-1 px-4 py-2 rounded text-sm border transition-colors",
                               selectedLayer.style?.textTransform === "lowercase"
-                                ? "bg-white/10 border-white/30 text-white"
-                                : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10"
+                                ? "bg-secondary border-border text-foreground"
+                                : "bg-secondary border-border text-muted-foreground hover:bg-muted"
                             )}
                           >
                             aa
                           </button>
                           <button
                             aria-label="Remove text transformation"
-                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { textTransform: "none" })}
+                            onClick={() => handleLayerStyleUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, { textTransform: "none" })}
                             className={cn(
                               "flex-1 px-4 py-2 rounded text-sm border transition-colors",
                               !selectedLayer.style?.textTransform || selectedLayer.style?.textTransform === "none"
-                                ? "bg-white/10 border-white/30 text-white"
-                                : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10"
+                                ? "bg-secondary border-border text-foreground"
+                                : "bg-secondary border-border text-muted-foreground hover:bg-muted"
                             )}
                           >
                             None
@@ -1623,11 +1770,11 @@ export function CarouselGenerator(): JSX.Element {
                         </div>
                       </div>
                     </div>
-                  ) : selectedAction === "background" ? (
+                  ) : carouselSelectedAction === "background" ? (
                     /* Background Settings View */
                     <div className="p-4 space-y-4 overflow-y-auto">
                       {/* Apply to all slides toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-secondary border border-border">
                         <div>
                           <label className="text-sm font-medium">Apply to all slides</label>
                           <p className="text-xs text-muted-foreground">Apply these settings to all slides</p>
@@ -1637,13 +1784,13 @@ export function CarouselGenerator(): JSX.Element {
                           onClick={() => setApplyToAllSlides(!applyToAllSlides)}
                           className={cn(
                             "relative w-11 h-6 rounded-full transition-colors",
-                            applyToAllSlides ? "bg-accent" : "bg-white/10"
+                            applyToAllSlides ? "bg-accent" : "bg-secondary"
                           )}
                           aria-pressed={applyToAllSlides}
                         >
                           <span
                             className={cn(
-                              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-background transition-transform",
                               applyToAllSlides ? "translate-x-5" : "translate-x-0"
                             )}
                           />
@@ -1651,21 +1798,23 @@ export function CarouselGenerator(): JSX.Element {
                       </div>
 
                       {/* Background Type */}
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">Background Type</label>
+                      <div className="px-4 py-3 border-b border-border">
+                        <span className="text-xs text-muted-foreground uppercase tracking-wide">Background Type</span>
+                      </div>
+                      <div className="p-4 space-y-2">
                         <div className="grid grid-cols-2 gap-2">
                           {BACKGROUND_TYPES.map((type) => {
-                            const currentType = carouselData.slides[selectedSlideIndex]?.background?.type || DEFAULT_BACKGROUND_TYPE
+                            const currentType = carouselData.slides[carouselSelectedSlideIndex]?.background?.type || DEFAULT_BACKGROUND_TYPE
                             const isSelected = currentType === type
                             return (
                               <button
                                 key={type}
-                                onClick={() => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { type })}
+                                onClick={() => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { type })}
                                 className={cn(
                                   "px-4 py-2.5 rounded-lg border transition-all text-sm capitalize",
                                   isSelected
                                     ? "bg-accent/20 border-accent text-accent"
-                                    : "bg-white/5 border-white/10 hover:bg-white/10"
+                                    : "bg-secondary border-border hover:bg-muted"
                                 )}
                               >
                                 {type}
@@ -1676,114 +1825,222 @@ export function CarouselGenerator(): JSX.Element {
                       </div>
 
                       {/* Background Color */}
-                      {carouselData.slides[selectedSlideIndex]?.background?.type !== "photo" && (
-                        <div className="space-y-2">
-                          <label className="text-sm text-muted-foreground">Background Color</label>
-                          <div className="flex items-center gap-2">
+                      {carouselData.slides[carouselSelectedSlideIndex]?.background?.type !== "photo" && (
+                        <>
+                          <div className="px-4 py-3 border-b border-border">
+                            <span className="text-xs text-muted-foreground uppercase tracking-wide">Background Color</span>
+                          </div>
+                          <div className="p-4 space-y-2">
+                            <div className="flex items-center gap-2">
                             <input
+                              ref={backgroundColorPickerRef}
                               type="color"
-                              value={carouselData.slides[selectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR}
-                              onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { color: e.target.value })}
-                              className="w-12 h-10 rounded border border-white/10 bg-white/5 cursor-pointer"
+                              value={carouselData.slides[carouselSelectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR}
+                              onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { color: e.target.value })}
+                              className="hidden"
                               aria-label="Select background color"
                             />
-                            <input
-                              type="text"
-                              value={carouselData.slides[selectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR}
-                              onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { color: e.target.value })}
-                              className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
-                              placeholder={DEFAULT_BACKGROUND_COLOR}
-                              aria-label="Background color value"
-                            />
+                            <div className="flex-1 relative">
+                              <button
+                                type="button"
+                                onClick={() => backgroundColorPickerRef.current?.click()}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded border border-border cursor-pointer hover:scale-110 transition-transform"
+                                style={{ backgroundColor: carouselData.slides[carouselSelectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR }}
+                                aria-label="Open color picker"
+                              />
+                              <input
+                                type="text"
+                                value={carouselData.slides[carouselSelectedSlideIndex]?.background?.color || DEFAULT_BACKGROUND_COLOR}
+                                onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { color: e.target.value })}
+                                className="w-full pl-10 pr-3 py-2 rounded bg-secondary border border-border text-sm focus:outline-none focus:border-ring"
+                                placeholder={DEFAULT_BACKGROUND_COLOR}
+                                aria-label="Background color value"
+                              />
+                            </div>
                           </div>
                         </div>
                       )}
 
-                      {/* Photo URL */}
-                      {carouselData.slides[selectedSlideIndex]?.background?.type === "photo" && (
+                      {/* Photo Upload */}
+                      {carouselData.slides[carouselSelectedSlideIndex]?.background?.type === "photo" && (
                         <div className="space-y-2">
-                          <label className="text-sm text-muted-foreground">Photo URL</label>
-                          <input
-                            type="text"
-                            value={carouselData.slides[selectedSlideIndex]?.background?.photoUrl || ""}
-                            onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { photoUrl: e.target.value })}
-                            className="w-full px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
-                            placeholder="https://example.com/image.jpg"
-                            aria-label="Background photo URL"
-                          />
+                          <label className="text-sm text-muted-foreground">Upload Photo</label>
+                          <div className="relative">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) {
+                                  const reader = new FileReader()
+                                  reader.onload = (event) => {
+                                    const result = event.target?.result as string
+                                    if (result) {
+                                      handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { photoUrl: result })
+                                    }
+                                  }
+                                  reader.readAsDataURL(file)
+                                }
+                              }}
+                              className="w-full px-3 py-2 rounded bg-secondary border border-border text-sm focus:outline-none focus:border-ring file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-secondary file:text-foreground hover:file:bg-muted cursor-pointer"
+                              aria-label="Upload background photo"
+                            />
+                          </div>
+                          {carouselData.slides[carouselSelectedSlideIndex]?.background?.photoUrl && (
+                            <>
+                              <div className="mt-2 relative group">
+                                <img 
+                                  src={carouselData.slides[carouselSelectedSlideIndex]?.background?.photoUrl} 
+                                  alt="Preview" 
+                                  className="w-full h-32 object-cover rounded border border-border"
+                                />
+                                {carouselData.slides[carouselSelectedSlideIndex]?.background?.overlayEnabled && (
+                                  <div 
+                                    className="absolute inset-0 bg-black rounded"
+                                    style={{
+                                      opacity: carouselData.slides[carouselSelectedSlideIndex]?.background?.overlayOpacity ?? 0.5
+                                    }}
+                                  />
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleBackgroundUpdate(
+                                      applyToAllSlides ? "all" : carouselSelectedSlideIndex,
+                                      { 
+                                        photoUrl: undefined,
+                                        overlayEnabled: false,
+                                        overlayOpacity: undefined
+                                      }
+                                    )
+                                  }}
+                                  className="absolute top-2 right-2 p-1.5 rounded bg-background/90 backdrop-blur-sm border border-border hover:bg-background transition-colors opacity-0 group-hover:opacity-100"
+                                  aria-label="Remove photo"
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </button>
+                              </div>
+                              <div className="mt-3 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <label className="text-sm text-muted-foreground">Enable Overlay</label>
+                                  <Switch
+                                    checked={carouselData.slides[carouselSelectedSlideIndex]?.background?.overlayEnabled ?? false}
+                                    onCheckedChange={(checked) => {
+                                      handleBackgroundUpdate(
+                                        applyToAllSlides ? "all" : carouselSelectedSlideIndex,
+                                        { 
+                                          overlayEnabled: checked,
+                                          overlayOpacity: checked ? (carouselData.slides[carouselSelectedSlideIndex]?.background?.overlayOpacity ?? 0.5) : undefined
+                                        }
+                                      )
+                                    }}
+                                  />
+                                </div>
+                                {carouselData.slides[carouselSelectedSlideIndex]?.background?.overlayEnabled && (
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <label className="text-sm text-muted-foreground">Overlay Opacity</label>
+                                      <span className="text-xs text-muted-foreground">
+                                        {Math.round((carouselData.slides[carouselSelectedSlideIndex]?.background?.overlayOpacity ?? 0.5) * 100)}%
+                                      </span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min="0"
+                                      max="1"
+                                      step="0.01"
+                                      value={carouselData.slides[carouselSelectedSlideIndex]?.background?.overlayOpacity ?? 0.5}
+                                      onChange={(e) => {
+                                        handleBackgroundUpdate(
+                                          applyToAllSlides ? "all" : carouselSelectedSlideIndex,
+                                          { overlayOpacity: parseFloat(e.target.value) }
+                                        )
+                                      }}
+                                      className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </div>
                       )}
 
+                      <div className="border-t border-border" />
+
                       {/* Accent Color */}
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">Accent Color</label>
+                      <div className="px-4 py-3 border-b border-border">
+                        <span className="text-xs text-muted-foreground uppercase tracking-wide">Accent Color</span>
+                      </div>
+                      <div className="p-4 space-y-2">
                         <div className="flex items-center gap-2">
                           <input
+                            ref={accentColorPickerRef}
                             type="color"
-                            value={carouselData.slides[selectedSlideIndex]?.background?.accentColor || DEFAULT_ACCENT_COLOR}
-                            onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { accentColor: e.target.value })}
-                            className="w-12 h-10 rounded border border-white/10 bg-white/5 cursor-pointer"
+                            value={carouselData.slides[carouselSelectedSlideIndex]?.background?.accentColor || DEFAULT_ACCENT_COLOR}
+                            onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { accentColor: e.target.value })}
+                            className="hidden"
                             aria-label="Select accent color"
                           />
-                          <input
-                            type="text"
-                            value={carouselData.slides[selectedSlideIndex]?.background?.accentColor || DEFAULT_ACCENT_COLOR}
-                            onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { accentColor: e.target.value })}
-                            className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
-                            placeholder={DEFAULT_ACCENT_COLOR}
-                            aria-label="Accent color value"
-                          />
+                          <div className="flex-1 relative">
+                            <button
+                              type="button"
+                              onClick={() => accentColorPickerRef.current?.click()}
+                              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded border border-border cursor-pointer hover:scale-110 transition-transform"
+                              style={{ backgroundColor: carouselData.slides[carouselSelectedSlideIndex]?.background?.accentColor || DEFAULT_ACCENT_COLOR }}
+                              aria-label="Open color picker"
+                            />
+                            <input
+                              type="text"
+                              value={carouselData.slides[carouselSelectedSlideIndex]?.background?.accentColor || DEFAULT_ACCENT_COLOR}
+                              onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { accentColor: e.target.value })}
+                              className="w-full pl-10 pr-3 py-2 rounded bg-secondary border border-border text-sm focus:outline-none focus:border-ring"
+                              placeholder={DEFAULT_ACCENT_COLOR}
+                              aria-label="Accent color value"
+                            />
+                          </div>
                         </div>
                       </div>
 
+                      <div className="border-t border-border" />
+
                       {/* Pattern Settings */}
-                      <div className="space-y-3 p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="px-4 py-3 border-b border-border">
                         <div className="flex items-center justify-between">
-                          <label className="text-sm font-medium">Pattern</label>
-                          <button
-                            aria-label="Toggle background pattern"
-                            onClick={() => {
-                              const currentEnabled = carouselData.slides[selectedSlideIndex]?.background?.pattern?.enabled || false
-                              handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
-                                pattern: { enabled: !currentEnabled }
+                          <span className="text-xs text-muted-foreground uppercase tracking-wide">Pattern</span>
+                          <Switch
+                            checked={carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.enabled ?? false}
+                            onCheckedChange={(checked) => {
+                              handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, {
+                                pattern: { enabled: checked }
                               })
                             }}
-                            className={cn(
-                              "relative w-11 h-6 rounded-full transition-colors",
-                              carouselData.slides[selectedSlideIndex]?.background?.pattern?.enabled ? "bg-accent" : "bg-white/10"
-                            )}
-                            aria-pressed={carouselData.slides[selectedSlideIndex]?.background?.pattern?.enabled}
-                          >
-                            <span
-                              className={cn(
-                                "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
-                                carouselData.slides[selectedSlideIndex]?.background?.pattern?.enabled ? "translate-x-5" : "translate-x-0"
-                              )}
-                            />
-                          </button>
+                          />
                         </div>
 
-                        {carouselData.slides[selectedSlideIndex]?.background?.pattern?.enabled && (
+                        {carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.enabled && (
                           <>
                             {/* Pattern Type */}
-                            <div className="space-y-2">
-                              <label className="text-xs text-muted-foreground">Pattern Type</label>
+                            <div className="px-4 py-3 border-b border-border">
+                              <span className="text-xs text-muted-foreground uppercase tracking-wide">Pattern Type</span>
+                            </div>
+                            <div className="p-4 space-y-2">
                               <div className="grid grid-cols-3 gap-2">
                                 {PATTERN_TYPES.map((patternType) => {
-                                  const currentPattern = carouselData.slides[selectedSlideIndex]?.background?.pattern?.type
+                                  const currentPattern = carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.type
                                   const isSelected = currentPattern === patternType
                                   return (
                                     <button
                                       aria-label={`Select ${patternType} pattern`}
                                       key={patternType}
-                                      onClick={() => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
+                                      onClick={() => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, {
                                         pattern: { type: patternType }
                                       })}
                                       className={cn(
                                         "px-2 py-1.5 rounded text-xs border transition-all capitalize",
                                         isSelected
                                           ? "bg-accent/20 border-accent text-accent"
-                                          : "bg-white/5 border-white/10 hover:bg-white/10"
+                                          : "bg-secondary border-border hover:bg-muted"
                                       )}
                                     >
                                       {patternType}
@@ -1792,41 +2049,44 @@ export function CarouselGenerator(): JSX.Element {
                                 })}
                               </div>
                             </div>
+                            </div>
 
                             {/* Pattern Opacity */}
-                            <div className="space-y-2">
+                            <div className="px-4 py-3 border-b border-border">
+                              <span className="text-xs text-muted-foreground uppercase tracking-wide">Opacity</span>
+                            </div>
+                            <div className="p-4 space-y-2">
                               <div className="flex items-center justify-between">
-                                <label className="text-xs text-muted-foreground">Opacity</label>
                                 <button
                                   aria-label="Toggle pattern opacity adjustment"
                                   onClick={() => {
-                                    const currentEnabled = carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacityEnabled || false
-                                    handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
+                                    const currentEnabled = carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.opacityEnabled || false
+                                    handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, {
                                       pattern: { opacityEnabled: !currentEnabled }
                                     })
                                   }}
                                   className={cn(
                                     "relative w-9 h-5 rounded-full transition-colors",
-                                    carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacityEnabled ? "bg-accent" : "bg-white/10"
+                                    carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.opacityEnabled ? "bg-accent" : "bg-secondary"
                                   )}
-                                  aria-pressed={carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacityEnabled}
+                                  aria-pressed={carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.opacityEnabled}
                                 >
                                   <span
                                     className={cn(
-                                      "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-                                      carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacityEnabled ? "translate-x-4" : "translate-x-0"
+                                      "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-background transition-transform",
+                                      carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.opacityEnabled ? "translate-x-4" : "translate-x-0"
                                     )}
                                   />
                                 </button>
                               </div>
-                              {carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacityEnabled && (
+                              {carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.opacityEnabled && (
                                   <input
                                     type="range"
                                     min={PATTERN_OPACITY_RANGE.min}
                                     max={PATTERN_OPACITY_RANGE.max}
                                     step={PATTERN_OPACITY_RANGE.step}
-                                    value={carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacity || DEFAULT_PATTERN_OPACITY}
-                                    onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
+                                    value={carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.opacity || DEFAULT_PATTERN_OPACITY}
+                                    onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, {
                                       pattern: { opacity: parseFloat(e.target.value) }
                                     })}
                                     className="w-full"
@@ -1836,55 +2096,57 @@ export function CarouselGenerator(): JSX.Element {
                             </div>
 
                             {/* Pattern Scale */}
-                            <div className="space-y-2">
+                            <div className="px-4 py-3 border-b border-border">
                               <div className="flex items-center justify-between">
-                                <label className="text-xs text-muted-foreground">Scale</label>
+                                <span className="text-xs text-muted-foreground uppercase tracking-wide">Scale</span>
                                 <button
                                   aria-label="Toggle pattern scale adjustment"
                                   onClick={() => {
-                                    const currentEnabled = carouselData.slides[selectedSlideIndex]?.background?.pattern?.scaleEnabled || false
-                                    handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
+                                    const currentEnabled = carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.scaleEnabled || false
+                                    handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, {
                                       pattern: { scaleEnabled: !currentEnabled }
                                     })
                                   }}
                                   className={cn(
                                     "relative w-9 h-5 rounded-full transition-colors",
-                                    carouselData.slides[selectedSlideIndex]?.background?.pattern?.scaleEnabled ? "bg-accent" : "bg-white/10"
+                                    carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.scaleEnabled ? "bg-accent" : "bg-secondary"
                                   )}
-                                  aria-pressed={carouselData.slides[selectedSlideIndex]?.background?.pattern?.scaleEnabled}
+                                  aria-pressed={carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.scaleEnabled}
                                 >
                                   <span
                                     className={cn(
-                                      "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-                                      carouselData.slides[selectedSlideIndex]?.background?.pattern?.scaleEnabled ? "translate-x-4" : "translate-x-0"
+                                      "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-background transition-transform",
+                                      carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.scaleEnabled ? "translate-x-4" : "translate-x-0"
                                     )}
                                   />
                                 </button>
                               </div>
-                              {carouselData.slides[selectedSlideIndex]?.background?.pattern?.scaleEnabled && (
-                                  <input
-                                    type="range"
-                                    min={PATTERN_SCALE_RANGE.min}
-                                    max={PATTERN_SCALE_RANGE.max}
-                                    step={PATTERN_SCALE_RANGE.step}
-                                    value={carouselData.slides[selectedSlideIndex]?.background?.pattern?.scale || DEFAULT_PATTERN_SCALE}
-                                    onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
-                                      pattern: { scale: parseFloat(e.target.value) }
-                                    })}
-                                    className="w-full"
-                                    aria-label="Pattern scale"
-                                  />
-                              )}
                             </div>
+                            {carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.scaleEnabled && (
+                              <div className="p-4 space-y-2">
+                                <input
+                                  type="range"
+                                  min={PATTERN_SCALE_RANGE.min}
+                                  max={PATTERN_SCALE_RANGE.max}
+                                  step={PATTERN_SCALE_RANGE.step}
+                                  value={carouselData.slides[carouselSelectedSlideIndex]?.background?.pattern?.scale || DEFAULT_PATTERN_SCALE}
+                                  onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, {
+                                    pattern: { scale: parseFloat(e.target.value) }
+                                  })}
+                                  className="w-full"
+                                  aria-label="Pattern scale"
+                                />
+                              </div>
+                            )}
                           </>
                         )}
                       </div>
                     </div>
-                  ) : selectedAction === "size" ? (
+                  ) : carouselSelectedAction === "size" ? (
                     /* Size Settings View */
                     <div className="p-4 space-y-4">
                       {/* Apply to all slides toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-secondary border border-border">
                         <div>
                           <label className="text-sm font-medium">Apply to all slides</label>
                           <p className="text-xs text-muted-foreground">Apply this size to all slides</p>
@@ -1894,13 +2156,13 @@ export function CarouselGenerator(): JSX.Element {
                           onClick={() => setApplyToAllSlides(!applyToAllSlides)}
                           className={cn(
                             "relative w-11 h-6 rounded-full transition-colors",
-                            applyToAllSlides ? "bg-accent" : "bg-white/10"
+                            applyToAllSlides ? "bg-accent" : "bg-secondary"
                           )}
                           aria-pressed={applyToAllSlides}
                         >
                           <span
                             className={cn(
-                              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-background transition-transform",
                               applyToAllSlides ? "translate-x-5" : "translate-x-0"
                             )}
                           />
@@ -1912,18 +2174,18 @@ export function CarouselGenerator(): JSX.Element {
                         <label className="text-sm text-muted-foreground">Aspect Ratio</label>
                           <div className="flex gap-3">
                             {SIZE_OPTIONS.map((option) => {
-                              const currentSize = carouselData.slides[selectedSlideIndex]?.size || DEFAULT_SIZE
+                              const currentSize = carouselData.slides[carouselSelectedSlideIndex]?.size || DEFAULT_SIZE
                               const isSelected = currentSize === option.value
                             return (
                               <button
                                 aria-label={`Select ${option.label} aspect ratio`}
                                 key={option.value}
-                                onClick={() => handleSizeUpdate(applyToAllSlides ? "all" : selectedSlideIndex, option.value)}
+                                onClick={() => handleSizeUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, option.value)}
                                 className={cn(
                                   "flex-1 flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
                                   isSelected
-                                    ? "bg-white/5 border-accent"
-                                    : "bg-white/5 border-white/10 hover:border-white/20"
+                                    ? "bg-secondary border-accent"
+                                    : "bg-secondary border-border hover:border-ring"
                                 )}
                               >
                                 <span className={cn(
@@ -1944,11 +2206,11 @@ export function CarouselGenerator(): JSX.Element {
                         </div>
                       </div>
                     </div>
-                  ) : selectedAction === "template" ? (
+                  ) : carouselSelectedAction === "template" ? (
                     /* Template Selection View */
                     <div className="p-4 space-y-4">
                       {/* Apply to all slides toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-secondary border border-border">
                         <div>
                           <label className="text-sm font-medium">Apply to all slides</label>
                           <p className="text-xs text-muted-foreground">Apply this template to all slides</p>
@@ -1958,13 +2220,13 @@ export function CarouselGenerator(): JSX.Element {
                           onClick={() => setApplyToAllSlides(!applyToAllSlides)}
                           className={cn(
                             "relative w-11 h-6 rounded-full transition-colors",
-                            applyToAllSlides ? "bg-accent" : "bg-white/10"
+                            applyToAllSlides ? "bg-accent" : "bg-secondary"
                           )}
                           aria-pressed={applyToAllSlides}
                         >
                           <span
                             className={cn(
-                              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-background transition-transform",
                               applyToAllSlides ? "translate-x-5" : "translate-x-0"
                             )}
                           />
@@ -1983,7 +2245,7 @@ export function CarouselGenerator(): JSX.Element {
                                 if (!carouselData) return
                                 const slidesToUpdate = applyToAllSlides 
                                   ? carouselData.slides.map((_, i) => i) 
-                                  : [selectedSlideIndex]
+                                  : [carouselSelectedSlideIndex]
                                 
                                 const updatedSlides = carouselData.slides.map((slide, index) => {
                                   if (slidesToUpdate.includes(index)) {
@@ -1994,7 +2256,7 @@ export function CarouselGenerator(): JSX.Element {
                                 const updatedData = { ...carouselData, slides: updatedSlides }
                                 updateCarouselData(updatedData, "Template applied")
                               }}
-                              className="group relative overflow-hidden rounded-lg border-2 border-white/10 hover:border-accent/50 transition-all bg-white/5 hover:bg-white/10"
+                              className="group relative overflow-hidden rounded-lg border-2 border-border hover:border-accent/50 transition-all bg-secondary hover:bg-muted"
                             >
                               {/* Template Preview */}
                               <div 
@@ -2015,39 +2277,39 @@ export function CarouselGenerator(): JSX.Element {
                                 {template.preview.layout === "centered" && (
                                   <div className="absolute inset-0 flex items-center justify-center p-4">
                                     <div className="w-3/4 space-y-2">
-                                      <div className="h-2 bg-white/30 rounded" style={{ width: "80%" }} />
-                                      <div className="h-2 bg-white/20 rounded" style={{ width: "60%" }} />
+                                      <div className="h-2 bg-muted rounded" style={{ width: "80%" }} />
+                                      <div className="h-2 bg-muted/80 rounded" style={{ width: "60%" }} />
                                     </div>
                                   </div>
                                 )}
                                 {template.preview.layout === "top" && (
                                   <div className="absolute top-8 left-8 right-8 space-y-2">
-                                    <div className="h-2 bg-white/30 rounded" style={{ width: "90%" }} />
-                                    <div className="h-2 bg-white/20 rounded" style={{ width: "70%" }} />
+                                    <div className="h-2 bg-muted rounded" style={{ width: "90%" }} />
+                                    <div className="h-2 bg-muted/80 rounded" style={{ width: "70%" }} />
                                   </div>
                                 )}
                                 {template.preview.layout === "split" && (
                                   <div className="absolute inset-0 flex">
                                     <div className="flex-1 p-4 space-y-2">
-                                      <div className="h-2 bg-white/30 rounded" />
-                                      <div className="h-2 bg-white/20 rounded" />
+                                      <div className="h-2 bg-muted rounded" />
+                                      <div className="h-2 bg-muted/80 rounded" />
                                     </div>
-                                    <div className="w-px bg-white/10" />
+                                    <div className="w-px bg-border" />
                                     <div className="flex-1 p-4 space-y-2">
-                                      <div className="h-2 bg-white/20 rounded" />
-                                      <div className="h-2 bg-white/10 rounded" />
+                                      <div className="h-2 bg-muted/80 rounded" />
+                                      <div className="h-2 bg-muted rounded" />
                                     </div>
                                   </div>
                                 )}
                                 {template.preview.layout === "minimal" && (
                                   <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-2/3 h-1 bg-white/20 rounded" />
+                                    <div className="w-2/3 h-1 bg-muted/80 rounded" />
                                   </div>
                                 )}
                               </div>
                               
                               {/* Template Info */}
-                              <div className="p-3 border-t border-white/10 bg-background/80 backdrop-blur-sm">
+                              <div className="p-3 border-t border-border bg-background/80 backdrop-blur-sm">
                                 <div className="font-medium text-sm mb-0.5">{template.name}</div>
                                 <div className="text-xs text-muted-foreground">{template.description}</div>
                               </div>
@@ -2056,11 +2318,11 @@ export function CarouselGenerator(): JSX.Element {
                         </div>
                       </div>
                     </div>
-                  ) : selectedAction === "layout" ? (
+                  ) : carouselSelectedAction === "layout" ? (
                     /* Layout Settings View */
                     <div className="p-4 space-y-6">
                       {/* Apply to all slides toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-secondary border border-border">
                         <div>
                           <label className="text-sm font-medium">Apply to all slides</label>
                           <p className="text-xs text-muted-foreground">Apply these settings to all slides</p>
@@ -2070,13 +2332,13 @@ export function CarouselGenerator(): JSX.Element {
                           onClick={() => setApplyToAllSlides(!applyToAllSlides)}
                           className={cn(
                             "relative w-11 h-6 rounded-full transition-colors",
-                            applyToAllSlides ? "bg-accent" : "bg-white/10"
+                            applyToAllSlides ? "bg-accent" : "bg-secondary"
                           )}
                           aria-pressed={applyToAllSlides}
                         >
                           <span
                             className={cn(
-                              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-background transition-transform",
                               applyToAllSlides ? "translate-x-5" : "translate-x-0"
                             )}
                           />
@@ -2084,18 +2346,18 @@ export function CarouselGenerator(): JSX.Element {
                       </div>
 
                       {/* Padding Section */}
-                      <div className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                      <div className="space-y-3 p-4 rounded-lg bg-secondary border border-border">
                         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PADDING</label>
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 rounded bg-white/5 border border-white/10">
+                            <div className="p-2 rounded bg-secondary border border-border">
                               <Layout className="w-4 h-4 text-muted-foreground" />
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-sm">Content Padding</span>
                                 <span className="text-sm font-medium">
-                                  {carouselData.slides[selectedSlideIndex]?.layout?.padding || DEFAULT_PADDING}px
+                                  {carouselData.slides[carouselSelectedSlideIndex]?.layout?.padding || DEFAULT_PADDING}px
                                 </span>
                               </div>
                               <input
@@ -2103,11 +2365,11 @@ export function CarouselGenerator(): JSX.Element {
                                   min={PADDING_RANGE.min}
                                   max={PADDING_RANGE.max}
                                   step={PADDING_RANGE.step}
-                                value={carouselData.slides[selectedSlideIndex]?.layout?.padding || DEFAULT_PADDING}
-                                onChange={(e) => handleLayoutUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { 
+                                value={carouselData.slides[carouselSelectedSlideIndex]?.layout?.padding || DEFAULT_PADDING}
+                                onChange={(e) => handleLayoutUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, { 
                                   padding: parseInt(e.target.value) 
                                 })}
-                                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-accent"
+                                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-accent"
                               />
                             </div>
                           </div>
@@ -2115,7 +2377,7 @@ export function CarouselGenerator(): JSX.Element {
                       </div>
 
                       {/* Alignment Section */}
-                      <div className="space-y-4 p-4 rounded-lg bg-white/5 border border-white/10">
+                      <div className="space-y-4 p-4 rounded-lg bg-secondary border border-border">
                         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">ALIGNMENT</label>
                         
                         {/* Horizontal Alignment */}
@@ -2127,25 +2389,25 @@ export function CarouselGenerator(): JSX.Element {
                                 { value: "center" as const, icon: AlignCenter },
                                 { value: "right" as const, icon: AlignRight },
                               ]).map(({ value, icon: Icon }) => {
-                                const currentAlign = carouselData.slides[selectedSlideIndex]?.layout?.horizontalAlign || DEFAULT_HORIZONTAL_ALIGN
+                                const currentAlign = carouselData.slides[carouselSelectedSlideIndex]?.layout?.horizontalAlign || DEFAULT_HORIZONTAL_ALIGN
                               const isSelected = currentAlign === value
                               return (
                                 <button
                                   key={value}
-                                  onClick={() => handleLayoutUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
+                                  onClick={() => handleLayoutUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, {
                                     horizontalAlign: value
                                   })}
                                   className={cn(
                                     "flex-1 flex items-center justify-center p-3 rounded-lg border-2 transition-all",
                                     isSelected
                                       ? "bg-accent border-accent"
-                                      : "bg-white/5 border-white/10 hover:border-white/20"
+                                      : "bg-secondary border-border hover:border-ring"
                                   )}
                                   aria-label={`Align text ${value}`}
                                 >
                                   <Icon className={cn(
                                     "w-5 h-5",
-                                    isSelected ? "text-white" : "text-muted-foreground"
+                                    isSelected ? "text-foreground" : "text-muted-foreground"
                                   )} />
                                 </button>
                               )
@@ -2163,25 +2425,25 @@ export function CarouselGenerator(): JSX.Element {
                                 { value: "bottom" as const, icon: AlignVerticalJustifyEnd },
                                 { value: "stretch" as const, icon: AlignVerticalDistributeCenter },
                               ]).map(({ value, icon: Icon }) => {
-                                const currentAlign = carouselData.slides[selectedSlideIndex]?.layout?.verticalAlign || DEFAULT_VERTICAL_ALIGN
+                                const currentAlign = carouselData.slides[carouselSelectedSlideIndex]?.layout?.verticalAlign || DEFAULT_VERTICAL_ALIGN
                               const isSelected = currentAlign === value
                               return (
                                 <button
                                   key={value}
-                                  onClick={() => handleLayoutUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
+                                  onClick={() => handleLayoutUpdate(applyToAllSlides ? "all" : carouselSelectedSlideIndex, {
                                     verticalAlign: value
                                   })}
                                   className={cn(
                                     "flex-1 flex items-center justify-center p-3 rounded-lg border-2 transition-all",
                                     isSelected
                                       ? "bg-accent border-accent"
-                                      : "bg-white/5 border-white/10 hover:border-white/20"
+                                      : "bg-secondary border-border hover:border-ring"
                                   )}
                                   aria-label={`Align content ${value}`}
                                 >
                                   <Icon className={cn(
                                     "w-5 h-5",
-                                    isSelected ? "text-white" : "text-muted-foreground"
+                                    isSelected ? "text-foreground" : "text-muted-foreground"
                                   )} />
                                 </button>
                               )
@@ -2190,11 +2452,11 @@ export function CarouselGenerator(): JSX.Element {
                         </div>
                       </div>
                     </div>
-                  ) : selectedAction === "info" ? (
+                  ) : carouselSelectedAction === "info" ? (
                     /* Info Settings View */
                     <div className="p-4 space-y-4">
                       {/* Show Header */}
-                      <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3">
+                      <div className="p-4 rounded-lg bg-secondary border border-border space-y-3">
                         <div className="flex items-center justify-between">
                           <label className="text-sm font-medium">Show header</label>
                           <Switch
@@ -2209,14 +2471,14 @@ export function CarouselGenerator(): JSX.Element {
                             value={carouselData.header?.text || ""}
                             onChange={(e) => handleHeaderUpdate(true, e.target.value)}
                             placeholder="Enter header text..."
-                            className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm outline-none focus:border-white/20 transition-colors"
+                            className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-ring transition-colors"
                             aria-label="Header text"
                           />
                         )}
                       </div>
 
                       {/* Show Footer */}
-                      <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3">
+                      <div className="p-4 rounded-lg bg-secondary border border-border space-y-3">
                         <div className="flex items-center justify-between">
                           <label className="text-sm font-medium">Show footer</label>
                           <Switch
@@ -2231,7 +2493,7 @@ export function CarouselGenerator(): JSX.Element {
                             value={carouselData.footer?.text || ""}
                             onChange={(e) => handleFooterUpdate(true, e.target.value)}
                             placeholder="Enter footer text..."
-                            className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm outline-none focus:border-white/20 transition-colors"
+                            className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-ring transition-colors"
                             aria-label="Footer text"
                           />
                         )}
@@ -2257,8 +2519,8 @@ export function CarouselGenerator(): JSX.Element {
                         onDragEnd={handleDragEnd}
                         onClick={() => handleSelectLayer(layer.id)}
                         className={`px-4 py-3 cursor-pointer transition-colors ${
-                          selectedLayerId === layer.id ? "bg-white/10" : "hover:bg-white/5"
-                        } ${draggedLayerId === layer.id ? "opacity-50" : ""}`}
+                          carouselSelectedLayerId === layer.id ? "bg-secondary" : "hover:bg-muted"
+                        } ${carouselDraggedLayerId === layer.id ? "opacity-50" : ""}`}
                         tabIndex={0}
                         role="button"
                         onKeyDown={(e) => {
@@ -2267,14 +2529,14 @@ export function CarouselGenerator(): JSX.Element {
                             handleSelectLayer(layer.id)
                           }
                         }}
-                        aria-pressed={selectedLayerId === layer.id}
+                        aria-pressed={carouselSelectedLayerId === layer.id}
                         aria-label={`Select ${layer.type} layer`}
                       >
                         <div className="flex items-center gap-2">
                           <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 cursor-grab active:cursor-grabbing" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[10px] uppercase tracking-wide text-muted-foreground px-1.5 py-0.5 bg-white/5 rounded">
+                              <span className="text-[10px] uppercase tracking-wide text-muted-foreground px-1.5 py-0.5 bg-secondary rounded">
                                 {layer.type}
                               </span>
                               {!layer.visible && <span className="text-[10px] text-muted-foreground">(hidden)</span>}
@@ -2290,9 +2552,9 @@ export function CarouselGenerator(): JSX.Element {
                                   aria-label={layer.visible ? "Hide layer" : "Show layer"}
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    handleLayerVisibility(selectedSlideIndex, layer.id)
+                                    handleLayerVisibility(carouselSelectedSlideIndex, layer.id)
                                   }}
-                                  className="p-1 rounded hover:bg-white/10 transition-colors"
+                                  className="p-1 rounded hover:bg-secondary transition-colors"
                                 >
                                   {layer.visible ? (
                                     <Eye className="w-3.5 h-3.5 text-muted-foreground" />
@@ -2311,7 +2573,7 @@ export function CarouselGenerator(): JSX.Element {
                                   aria-label="Delete layer"
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    handleDeleteLayer(selectedSlideIndex, layer.id)
+                                    handleDeleteLayer(carouselSelectedSlideIndex, layer.id)
                                   }}
                                   className="p-1 rounded hover:bg-red-500/20 transition-colors"
                                 >
@@ -2329,7 +2591,7 @@ export function CarouselGenerator(): JSX.Element {
                   </div>
 
                   {selectedLayer && (
-                    <div className="p-4 border-t border-border bg-white/5">
+                    <div className="p-4 border-t border-border bg-secondary">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs text-muted-foreground">Edit layer</span>
                         <select
@@ -2337,11 +2599,11 @@ export function CarouselGenerator(): JSX.Element {
                           onChange={(e) => {
                             if (!carouselData) return
                             const updatedSlides = carouselData.slides.map((slide, index) => {
-                              if (index === selectedSlideIndex) {
+                              if (index === carouselSelectedSlideIndex) {
                                 return {
                                   ...slide,
                                   layers: slide.layers.map((l) =>
-                                    l.id === selectedLayerId ? { ...l, type: e.target.value as Layer["type"] } : l,
+                                    l.id === carouselSelectedLayerId ? { ...l, type: e.target.value as Layer["type"] } : l,
                                   )
                                 }
                               }
@@ -2350,7 +2612,7 @@ export function CarouselGenerator(): JSX.Element {
                               const updatedData = { ...carouselData, slides: updatedSlides }
                               updateCarouselData(updatedData, "Changes saved")
                             }}
-                          className="text-xs bg-white/5 border border-white/10 rounded px-2 py-1 cursor-pointer"
+                          className="text-xs bg-secondary border border-border rounded px-2 py-1 cursor-pointer"
                         >
                           <option value="heading">Heading</option>
                           <option value="subheading">Subheading</option>
@@ -2359,22 +2621,16 @@ export function CarouselGenerator(): JSX.Element {
                       </div>
                       <textarea
                         value={selectedLayer.content}
-                        onChange={(e) => handleLayerUpdate(selectedSlideIndex, selectedLayerId!, e.target.value)}
+                        onChange={(e) => handleLayerUpdate(carouselSelectedSlideIndex, carouselSelectedLayerId!, e.target.value)}
                         rows={4}
-                        className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20 transition-colors resize-none"
+                        className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm focus:outline-none focus:border-ring transition-colors resize-none"
                         placeholder="Enter text..."
                         aria-label="Layer content"
                       />
                       <div className="flex items-center justify-end mt-3">
                         <div aria-live="polite" className="sr-only">
-                          {savedStatus || ""}
+                          {carouselSavedStatus || ""}
                         </div>
-                        {savedStatus && (
-                          <span className="flex items-center gap-1.5 text-xs text-green-400">
-                            <Check className="w-3 h-3" />
-                            {savedStatus}
-                          </span>
-                        )}
                       </div>
                     </div>
                   )}
@@ -2383,20 +2639,20 @@ export function CarouselGenerator(): JSX.Element {
                     <p className="text-xs text-muted-foreground mb-2">Add layer</p>
                     <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => handleAddLayer(selectedSlideIndex, "heading")}
-                        className="px-3 py-1.5 text-xs rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                        onClick={() => handleAddLayer(carouselSelectedSlideIndex, "heading")}
+                        className="px-3 py-1.5 text-xs rounded-md bg-secondary hover:bg-muted transition-colors cursor-pointer"
                       >
                         Heading
                       </button>
                       <button
-                        onClick={() => handleAddLayer(selectedSlideIndex, "subheading")}
-                        className="px-3 py-1.5 text-xs rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                        onClick={() => handleAddLayer(carouselSelectedSlideIndex, "subheading")}
+                        className="px-3 py-1.5 text-xs rounded-md bg-secondary hover:bg-muted transition-colors cursor-pointer"
                       >
                         Subheading
                       </button>
                       <button
-                        onClick={() => handleAddLayer(selectedSlideIndex, "body")}
-                        className="px-3 py-1.5 text-xs rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                        onClick={() => handleAddLayer(carouselSelectedSlideIndex, "body")}
+                        className="px-3 py-1.5 text-xs rounded-md bg-secondary hover:bg-muted transition-colors cursor-pointer"
                       >
                         Body
                       </button>
@@ -2423,7 +2679,7 @@ export function CarouselGenerator(): JSX.Element {
             </div>
             <button
               onClick={() => setIsLoadModalOpen(false)}
-              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-white/5 hover:text-white"
+              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
@@ -2437,11 +2693,11 @@ export function CarouselGenerator(): JSX.Element {
                 <button
                   key={entry.id}
                   onClick={() => handleLoadCarouselSelection(entry)}
-                  className="w-full cursor-pointer px-4 py-3 text-left transition-colors hover:bg-white/5"
+                  className="w-full cursor-pointer px-4 py-3 text-left transition-colors hover:bg-secondary"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium text-white">{entry.data.topic}</p>
+                      <p className="text-sm font-medium text-foreground">{entry.data.topic}</p>
                     </div>
                     <span className="text-[11px] text-muted-foreground">
                       {new Date(entry.savedAt).toLocaleString()}

@@ -65,6 +65,8 @@ export interface SlideBackground {
   photoUrl?: string
   accentColor?: string
   pattern?: BackgroundPattern
+  overlayEnabled?: boolean
+  overlayOpacity?: number
 }
 
 export interface Slide {
@@ -158,7 +160,9 @@ const isSlideBackground = (value: unknown): value is SlideBackground =>
   isOptionalString(value.color) &&
   isOptionalString(value.photoUrl) &&
   isOptionalString(value.accentColor) &&
-  (value.pattern === undefined || isBackgroundPattern(value.pattern))
+  (value.pattern === undefined || isBackgroundPattern(value.pattern)) &&
+  isOptionalBoolean(value.overlayEnabled) &&
+  isOptionalNumber(value.overlayOpacity)
 
 export const isSlide = (value: unknown): value is Slide =>
   isRecord(value) &&

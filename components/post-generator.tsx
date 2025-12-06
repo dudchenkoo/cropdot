@@ -36,12 +36,13 @@ export function PostGenerator(): JSX.Element {
   const pathname = usePathname()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  // Post-specific state with prefixes for clarity and isolation
   const [postData, setPostData] = useState<PostGenerationResponse | null>(null)
-  const [editedContent, setEditedContent] = useState<string>("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isInitializing, setIsInitializing] = useState(true)
-  const [viewMode, setViewMode] = useState<"dashboard" | "creation">("dashboard")
-  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | null>(null)
+  const [postEditedContent, setPostEditedContent] = useState<string>("")
+  const [postIsLoading, setPostIsLoading] = useState(false)
+  const [postIsInitializing, setPostIsInitializing] = useState(true)
+  const [postViewMode, setPostViewMode] = useState<"dashboard" | "creation">("dashboard")
+  const [postSaveStatus, setPostSaveStatus] = useState<"saved" | "saving" | null>(null)
   const [isEmojiOpen, setIsEmojiOpen] = useState(false)
   const [emojiSearch, setEmojiSearch] = useState("")
   
@@ -260,16 +261,16 @@ export function PostGenerator(): JSX.Element {
     const textarea = document.querySelector('textarea[placeholder="Start writing..."]') as HTMLTextAreaElement
     if (!textarea) {
       // Fallback: insert at the end
-      setEditedContent(editedContent + emoji)
+      setPostEditedContent(postEditedContent + emoji)
       setIsEmojiOpen(false)
       return
     }
 
-    const start = textarea.selectionStart || editedContent.length
-    const end = textarea.selectionEnd || editedContent.length
-    const newContent = editedContent.substring(0, start) + emoji + editedContent.substring(end)
+    const start = textarea.selectionStart || postEditedContent.length
+    const end = textarea.selectionEnd || postEditedContent.length
+    const newContent = postEditedContent.substring(0, start) + emoji + postEditedContent.substring(end)
     
-    setEditedContent(newContent)
+    setPostEditedContent(newContent)
     
     // Set cursor position after inserted emoji
     setTimeout(() => {
@@ -289,12 +290,12 @@ export function PostGenerator(): JSX.Element {
         try {
           const parsed = JSON.parse(storedData) as PostGenerationResponse
           setPostData(parsed)
-          setEditedContent(parsed.content)
-          setViewMode("creation")
-          setIsInitializing(false)
+          setPostEditedContent(parsed.content)
+          setPostViewMode("creation")
+          setPostIsInitializing(false)
         } catch (error) {
           console.error("Error parsing stored post data:", error)
-          setIsInitializing(false)
+          setPostIsInitializing(false)
         }
       } else {
         // No data found - check if we're on post page, if so redirect
@@ -302,7 +303,7 @@ export function PostGenerator(): JSX.Element {
           router.push("/dashboard")
           return
         }
-        setIsInitializing(false)
+        setPostIsInitializing(false)
       }
       setMounted(true)
     }
@@ -310,15 +311,15 @@ export function PostGenerator(): JSX.Element {
 
   useEffect(() => {
     if (postData) {
-      setEditedContent(postData.content)
+      setPostEditedContent(postData.content)
     }
   }, [postData])
 
   // Auto-save functionality
   useEffect(() => {
-    if (!postData || !editedContent || isInitializing) return
+    if (!postData || !postEditedContent || postIsInitializing) return
 
-    setSaveStatus("saving")
+    setPostSaveStatus("saving")
     
     // Save to localStorage with debounce
     const timeoutId = setTimeout(() => {
@@ -326,24 +327,24 @@ export function PostGenerator(): JSX.Element {
         const dataToSave: PostGenerationResponse = {
           topic: postData.topic,
           platform: postData.platform,
-          content: editedContent,
+          content: postEditedContent,
           summary: postData.summary,
         }
         localStorage.setItem("generatedPostData", JSON.stringify(dataToSave))
-        setSaveStatus("saved")
+        setPostSaveStatus("saved")
         
         // Clear saved status after 2 seconds
-        setTimeout(() => setSaveStatus(null), 2000)
+        setTimeout(() => setPostSaveStatus(null), 2000)
       }
     }, 1000) // Debounce 1 second
 
     return () => clearTimeout(timeoutId)
-  }, [editedContent, postData, isInitializing])
+  }, [postEditedContent, postData, postIsInitializing])
 
   const handleGenerate = (data: PostGenerationResponse): void => {
     setPostData(data)
-    setEditedContent(data.content)
-    setViewMode("creation")
+    setPostEditedContent(data.content)
+    setPostViewMode("creation")
   }
 
   const handleBack = (): void => {
@@ -351,9 +352,9 @@ export function PostGenerator(): JSX.Element {
     if (typeof window !== "undefined") {
       localStorage.removeItem("generatedPostData")
     }
-    setViewMode("dashboard")
+    setPostViewMode("dashboard")
     setPostData(null)
-    setEditedContent("")
+    setPostEditedContent("")
     // Redirect to dashboard if we're on the post page
     if (isOnPostPage) {
       router.push("/dashboard")
@@ -362,7 +363,7 @@ export function PostGenerator(): JSX.Element {
 
   const handleCopy = async (): void => {
     try {
-      await navigator.clipboard.writeText(editedContent)
+      await navigator.clipboard.writeText(postEditedContent)
       toast.success("Post copied to clipboard!")
     } catch (error) {
       toast.error("Failed to copy post")
@@ -373,7 +374,7 @@ export function PostGenerator(): JSX.Element {
   const handleDownload = (): void => {
     if (!postData) return
     
-    const blob = new Blob([editedContent], { type: "text/plain" })
+    const blob = new Blob([postEditedContent], { type: "text/plain" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
@@ -393,7 +394,7 @@ export function PostGenerator(): JSX.Element {
       id: `post-${Date.now()}`,
       topic: postData.topic,
       platform: postData.platform,
-      content: editedContent,
+      content: postEditedContent,
       summary: postData.summary,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -408,7 +409,7 @@ export function PostGenerator(): JSX.Element {
   const handleRegenerate = async (): Promise<void> => {
     if (!postData) return
     
-    setIsLoading(true)
+    setPostIsLoading(true)
     try {
       const response = await fetch("/api/generate-post", {
         method: "POST",
@@ -426,7 +427,7 @@ export function PostGenerator(): JSX.Element {
         toast.error("Regeneration failed", {
           description: errorText || "Could not regenerate post. Please try again.",
         })
-        setIsLoading(false)
+        setPostIsLoading(false)
         return
       }
 
@@ -434,7 +435,7 @@ export function PostGenerator(): JSX.Element {
       if (contentType?.includes("application/json")) {
         const data = await response.json() as PostGenerationResponse
         setPostData(data)
-        setEditedContent(data.content)
+        setPostEditedContent(data.content)
         toast.success("Post regenerated!")
       } else {
         // Handle streaming response if needed
@@ -452,7 +453,7 @@ export function PostGenerator(): JSX.Element {
           try {
             const data = JSON.parse(fullText) as PostGenerationResponse
             setPostData(data)
-            setEditedContent(data.content)
+            setPostEditedContent(data.content)
             toast.success("Post regenerated!")
           } catch (error) {
             console.error("Error parsing streamed response:", error)
@@ -464,13 +465,13 @@ export function PostGenerator(): JSX.Element {
       console.error("Regeneration error:", error)
       toast.error("Failed to regenerate post")
     } finally {
-      setIsLoading(false)
+      setPostIsLoading(false)
     }
   }
 
   // Show loading state while initializing to avoid showing form before data loads
   // Also check if we're on /dashboard/post page - if so, we should have data, don't show form
-  if (isInitializing || (isOnPostPage && !postData)) {
+  if (postIsInitializing || (isOnPostPage && !postData)) {
     return (
       <ErrorBoundary componentName="PostGenerator">
         <div className="min-h-screen bg-background">
@@ -495,7 +496,7 @@ export function PostGenerator(): JSX.Element {
   }
 
   // Never show form on /dashboard/post page - only show results
-  if (viewMode === "dashboard" && !isOnPostPage) {
+  if (postViewMode === "dashboard" && !isOnPostPage) {
     return (
       <ErrorBoundary componentName="PostGenerator">
         <div className="min-h-screen bg-background">
@@ -508,7 +509,7 @@ export function PostGenerator(): JSX.Element {
                   Create high-performing LinkedIn text posts with AI
                 </p>
               </div>
-              <PostForm onGenerate={handleGenerate} isLoading={isLoading} setIsLoading={setIsLoading} />
+              <PostForm onGenerate={handleGenerate} postIsLoading={postIsLoading} setPostIsLoading={setPostIsLoading} />
             </div>
           </div>
         </div>
@@ -546,7 +547,7 @@ export function PostGenerator(): JSX.Element {
       <div className="min-h-screen bg-background">
         <Header 
           topic={postData?.topic} 
-          saveStatus={saveStatus}
+          saveStatus={postSaveStatus}
         />
         {/* Post Title Section with actions - similar to carousel dashboard */}
         <div className="border-b border-border px-6 py-4 bg-background">
@@ -561,7 +562,7 @@ export function PostGenerator(): JSX.Element {
                 Back to Generator
               </Button>
               <div className="h-4 w-px bg-border" />
-              <span className="text-sm text-muted-foreground">{editedContent.length} characters</span>
+              <span className="text-sm text-muted-foreground">{postEditedContent.length} characters</span>
             </div>
             <div className="flex items-center gap-2">
               <Popover open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
@@ -635,7 +636,7 @@ export function PostGenerator(): JSX.Element {
                 {/* Button */}
                 <button
                   onClick={handleRegenerate}
-                  disabled={isLoading}
+                  disabled={postIsLoading}
                   className="relative px-4 py-2 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Regenerate
@@ -655,7 +656,7 @@ export function PostGenerator(): JSX.Element {
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="space-y-6">
             {/* Post editor */}
-            <EditorContent content={editedContent} onChange={setEditedContent} />
+            <EditorContent content={postEditedContent} onChange={setPostEditedContent} />
           </div>
         </div>
       </div>

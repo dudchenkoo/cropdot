@@ -78,17 +78,19 @@ function CarouselPreviewComponent({ data, isLoading, currentSlide: controlledSli
       <div className="relative">
         {/* Controls in top right corner */}
         <div className="absolute top-0 right-0 z-20 flex items-center gap-2">
-          <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-background/95 backdrop-blur-sm">
+          <div className="relative flex items-center border border-border rounded-lg bg-background/95 backdrop-blur-sm">
             <Tooltip>
               <TooltipTrigger asChild>
-          <Button
-            variant={viewMode === "single" ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
-            onClick={() => setViewMode("single")}
-          >
+                <button
+                  type="button"
+                  className={cn(
+                    "relative z-10 h-8 w-8 flex items-center justify-center rounded-md transition-colors",
+                    viewMode === "single" ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  )}
+                  onClick={() => setViewMode("single")}
+                >
                   <Square className="w-4 h-4" />
-          </Button>
+                </button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Single view</p>
@@ -96,21 +98,23 @@ function CarouselPreviewComponent({ data, isLoading, currentSlide: controlledSli
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
-                  variant={viewMode === "grid" ? "secondary" : "ghost"} 
-                  size="icon"
-                  className="h-8 w-8 hover:bg-accent hover:scale-105 transition-all"
+                <button
+                  type="button"
+                  className={cn(
+                    "relative z-10 h-8 w-8 flex items-center justify-center rounded-md transition-colors",
+                    viewMode === "grid" ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  )}
                   onClick={() => setViewMode("grid")}
                 >
                   <Grid3x3 className="w-4 h-4" />
-          </Button>
+                </button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Grid view</p>
               </TooltipContent>
             </Tooltip>
+          </div>
         </div>
-      </div>
 
       {viewMode === "single" ? (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] px-4">
