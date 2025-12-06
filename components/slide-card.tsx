@@ -1,10 +1,8 @@
 import type { Slide, Layer } from "@/lib/carousel-types"
 import { cn } from "@/lib/utils"
-import { Quote } from "lucide-react"
-import Image from "next/image"
-import React, { memo, useMemo } from "react"
+import { Quote, RefreshCw } from "lucide-react"
+import type React from "react"
 import { getBackgroundStyle, getContentFromLayers, getLayerStyles } from "@/lib/helpers"
-import { DEFAULT_HIGHLIGHT_COLOR } from "@/lib/constants"
 
 interface SlideCardProps {
   slide: Slide
@@ -12,79 +10,18 @@ interface SlideCardProps {
   total: number
   compact?: boolean
   onDelete?: (index: number) => void
+  onRegenerate?: (index: number) => void
+  isRegenerating?: boolean
   header?: { enabled: boolean; text: string }
   footer?: { enabled: boolean; text: string }
 }
 
-// Helper function to parse and render text with ==highlight== markers
-export function renderTextWithHighlights(text: string, highlightColor: string | undefined, defaultHighlightColor: string, className: string, style: React.CSSProperties): React.ReactNode {
-  if (!text.includes('==')) {
-    return <span className={className} style={style}>{text}</span>
-  }
-  
-  // Use the provided highlightColor, or fall back to defaultHighlightColor, or yellow as last resort
-  const colorToUse = highlightColor || defaultHighlightColor || '#ffff00'
-  
-  const parts: React.ReactNode[] = []
-  const regex = /==([^=]+)==/g
-  let lastIndex = 0
-  let match
-  
-  while ((match = regex.exec(text)) !== null) {
-    // Add text before the highlight
-    if (match.index > lastIndex) {
-      parts.push(
-        <span key={`text-${lastIndex}`} className={className} style={style}>
-          {text.substring(lastIndex, match.index)}
-        </span>
-      )
-    }
-    
-    // Add highlighted text with the synced color
-    parts.push(
-      <span
-        key={`highlight-${match.index}`}
-        className={className}
-        style={{
-          ...style,
-          backgroundColor: colorToUse,
-          padding: '0.125rem 0.25rem',
-          borderRadius: '0.25rem',
-          display: 'inline-block',
-        }}
-      >
-        {match[1]}
-      </span>
-    )
-    
-    lastIndex = regex.lastIndex
-  }
-  
-  // Add remaining text
-  if (lastIndex < text.length) {
-    parts.push(
-      <span key={`text-${lastIndex}`} className={className} style={style}>
-        {text.substring(lastIndex)}
-      </span>
-    )
-  }
-  
-  return <>{parts}</>
-}
-
-function SlideCardComponent({ slide, index, total, compact = false, onDelete, header, footer }: SlideCardProps) {
+export function SlideCard({ slide, index, total, compact = false, onDelete, onRegenerate, isRegenerating = false, header, footer }: SlideCardProps) {
   const isFirst = index === 0
   const isLast = index === total - 1
 
-  const content = useMemo(() => getContentFromLayers(slide.layers, slide), [slide])
-  const backgroundStyle = useMemo(() => getBackgroundStyle(slide.background), [slide.background])
-  const backgroundPhoto = slide.background?.type === "photo" ? slide.background.photoUrl : null
-  const containerStyle = useMemo(
-    () => (backgroundPhoto ? { ...backgroundStyle, backgroundImage: undefined } : backgroundStyle),
-    [backgroundPhoto, backgroundStyle],
-  )
-  const overlayOpacity = slide.background?.overlayOpacity ?? 0
-  const overlayColor = slide.background?.overlayColor ?? "#000000"
+  const content = getContentFromLayers(slide.layers, slide)
+  const backgroundStyle = getBackgroundStyle(slide.background)
 
   // Determine aspect ratio based on slide size
   const getAspectRatio = () => {
@@ -99,27 +36,41 @@ function SlideCardComponent({ slide, index, total, compact = false, onDelete, he
         "border border-border rounded-xl overflow-hidden relative group",
         "flex flex-col justify-between",
         compact ? `w-full ${getAspectRatio()} p-4` : `w-80 ${getAspectRatio()} p-6`,
+        isRegenerating && "opacity-60"
       )}
-      style={containerStyle}
+      style={backgroundStyle}
     >
-      {backgroundPhoto && (
-        <Image
-          src={backgroundPhoto}
-          alt="Slide background"
-          fill
-          sizes="(max-width: 768px) 100vw, 320px"
-          className="object-cover pointer-events-none"
-          loading="lazy"
-          priority={false}
-        />
+      {/* Regenerate button - top right corner */}
+      {onRegenerate && !compact && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onRegenerate(index)
+          }}
+          disabled={isRegenerating}
+          className={cn(
+            "absolute top-2 right-2 z-20 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border/50",
+            "hover:bg-background hover:border-border transition-all",
+            "opacity-0 group-hover:opacity-100",
+            isRegenerating && "opacity-100 cursor-not-allowed",
+            "flex items-center justify-center"
+          )}
+          title="Regenerate this slide"
+        >
+          <RefreshCw className={cn("w-4 h-4 text-foreground", isRegenerating && "animate-spin")} />
+        </button>
       )}
-      {backgroundPhoto && overlayOpacity > 0 && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ backgroundColor: overlayColor, opacity: overlayOpacity }}
-          aria-hidden
-        />
+
+      {/* Loading overlay when regenerating */}
+      {isRegenerating && (
+        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2">
+            <RefreshCw className="w-6 h-6 text-primary animate-spin" />
+            <span className="text-xs text-muted-foreground">Regenerating...</span>
+          </div>
+        </div>
       )}
+
       {/* Header */}
       {header?.enabled && header.text && (
         <div className="absolute top-0 left-0 right-0 px-4 py-2 text-xs text-muted-foreground border-b border-white/10 bg-background/50 backdrop-blur-sm z-10">
@@ -160,7 +111,7 @@ function SlideCardComponent({ slide, index, total, compact = false, onDelete, he
                   <div key={`${layer.id}-${styleKey}`}>
                     {layer.type === "heading" && (
                       layer.style?.listType ? (
-                        <div className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-2xl", styleClass)} style={style}>
+                        <div className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-lg", styleClass)} style={style}>
                           {layer.style.listType === "ordered" ? (
                             <ol className="list-decimal list-inside space-y-1">
                               {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
@@ -172,14 +123,14 @@ function SlideCardComponent({ slide, index, total, compact = false, onDelete, he
                           )}
                         </div>
                       ) : (
-                        <h3 className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-2xl", styleClass)}>
-                          {renderTextWithHighlights(layer.content, layer.style?.highlightColor, DEFAULT_HIGHLIGHT_COLOR, styleClass, style)}
+                        <h3 className={cn("font-semibold text-foreground", compact ? "text-xs" : "text-lg", styleClass)} style={style}>
+                          {layer.content}
                         </h3>
                       )
                     )}
                     {layer.type === "subheading" && (
                       layer.style?.listType ? (
-                        <div className={cn("text-muted-foreground font-medium", compact ? "text-xs" : "text-base", styleClass)} style={style}>
+                        <div className={cn("text-muted-foreground font-medium", compact ? "text-xs" : "text-sm", styleClass)} style={style}>
                           {layer.style.listType === "ordered" ? (
                             <ol className="list-decimal list-inside space-y-1">
                               {layer.content.split('\n').filter(line => line.trim()).map((line, i) => <li key={i}>{line.trim()}</li>)}
@@ -191,8 +142,8 @@ function SlideCardComponent({ slide, index, total, compact = false, onDelete, he
                           )}
                         </div>
                       ) : (
-                        <h4 className={cn("text-muted-foreground font-medium", compact ? "text-xs" : "text-base", styleClass)}>
-                          {renderTextWithHighlights(layer.content, layer.style?.highlightColor, DEFAULT_HIGHLIGHT_COLOR, styleClass, style)}
+                        <h4 className={cn("text-muted-foreground font-medium", compact ? "text-xs" : "text-sm", styleClass)} style={style}>
+                          {layer.content}
                         </h4>
                       )
                     )}
@@ -210,8 +161,8 @@ function SlideCardComponent({ slide, index, total, compact = false, onDelete, he
                           )}
                         </div>
                       ) : (
-                        <p className={cn("text-muted-foreground leading-relaxed", compact ? "text-xs line-clamp-4" : "text-sm", styleClass)}>
-                          {renderTextWithHighlights(layer.content, layer.style?.highlightColor, DEFAULT_HIGHLIGHT_COLOR, styleClass, style)}
+                        <p className={cn("text-muted-foreground leading-relaxed", compact ? "text-xs line-clamp-4" : "text-sm", styleClass)} style={style}>
+                          {layer.content}
                         </p>
                       )
                     )}
@@ -308,14 +259,6 @@ function SlideCardComponent({ slide, index, total, compact = false, onDelete, he
         )}
       </div>
 
-      {/* Footer */}
-      {footer?.enabled && footer.text && (
-        <div className="absolute bottom-0 left-0 right-0 px-4 py-2 text-xs text-muted-foreground border-t border-white/10 bg-background/50 backdrop-blur-sm z-10">
-          {footer.text}
-        </div>
-      )}
     </div>
   )
 }
-
-export const SlideCard = memo(SlideCardComponent)

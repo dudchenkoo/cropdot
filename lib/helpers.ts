@@ -225,8 +225,12 @@ export function getLayerStyles(layer: Layer, compact: boolean): { style: React.C
     style.textDecoration = layer.style.underline ? "underline line-through" : "line-through"
   }
 
-  // Note: highlightColor is not applied here - it's only used for text wrapped in == markers
-  // and is handled separately in renderTextWithHighlights function
+  if (layer.style?.highlightColor) {
+    style.backgroundColor = layer.style.highlightColor
+    style.padding = "0.125rem 0.25rem"
+    style.borderRadius = "0.25rem"
+    style.display = "inline-block"
+  }
 
   return { style, className: classes.join(" ") }
 }
@@ -245,7 +249,6 @@ export function getBackgroundStyle(background: Slide["background"]): React.CSSPr
     style.backgroundImage = `url(${background.photoUrl})`
     style.backgroundSize = "cover"
     style.backgroundPosition = "center"
-    
     // Apply overlay if specified
     if (background.overlayColor && background.overlayOpacity !== undefined) {
       const overlayRgba = hexToRgba(background.overlayColor, background.overlayOpacity)

@@ -28,6 +28,14 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
+  // Optimize production builds
+  swcMinify: true,
+  // Reduce JavaScript bundle size
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
 }
 
 export default withBundleAnalyzer(nextConfig)

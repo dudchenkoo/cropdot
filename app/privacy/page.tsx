@@ -17,7 +17,7 @@ export default function PrivacyPage() {
           <h1
             className="text-3xl md:text-4xl font-semibold mb-8 bg-clip-text text-transparent"
             style={{
-              fontFamily: "var(--font-inter-tight), sans-serif",
+              fontFamily: "var(--font-lora), serif",
               backgroundImage: "linear-gradient(to bottom, #ffffff, #888888)",
             }}
           >

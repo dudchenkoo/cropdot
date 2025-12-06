@@ -15,7 +15,9 @@ const interTight = Inter_Tight({ subsets: ["latin"], variable: "--font-inter-tig
 export default function BillingPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [userEmail, setUserEmail] = useState<string>("")
-  const { data: session } = useSession()
+  const { data: session, status } = useSession({
+    required: false,
+  })
 
   useEffect(() => {
     setInvoices(getInvoices())
@@ -74,7 +76,7 @@ export default function BillingPage() {
           <h1
             className="text-3xl md:text-4xl font-semibold mb-4 bg-clip-text text-transparent"
             style={{
-              fontFamily: "var(--font-inter-tight), sans-serif",
+              fontFamily: "var(--font-lora), serif",
               backgroundImage: "linear-gradient(to bottom, #ffffff, #888888)",
             }}
           >

@@ -1,18 +1,59 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter, Roboto, Open_Sans, Montserrat, Poppins, Lato } from "next/font/google"
+import { Inter, Roboto, Open_Sans, Montserrat, Poppins, Lato, Lora } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/components/auth-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
-const roboto = Roboto({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-roboto" })
-const openSans = Open_Sans({ subsets: ["latin"], variable: "--font-open-sans" })
-const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat" })
-const poppins = Poppins({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-poppins" })
-const lato = Lato({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-lato" })
+const inter = Inter({ 
+  subsets: ["latin"], 
+  variable: "--font-inter",
+  display: "swap",
+  preload: true,
+})
+const lora = Lora({ 
+  subsets: ["latin"], 
+  weight: ["400", "500", "600", "700"], 
+  variable: "--font-lora",
+  display: "swap",
+  preload: true,
+})
+// Load carousel fonts with lower priority (preload: false)
+const roboto = Roboto({ 
+  subsets: ["latin"], 
+  weight: ["400", "700"], 
+  variable: "--font-roboto",
+  display: "swap",
+  preload: false,
+})
+const openSans = Open_Sans({ 
+  subsets: ["latin"], 
+  variable: "--font-open-sans",
+  display: "swap",
+  preload: false,
+})
+const montserrat = Montserrat({ 
+  subsets: ["latin"], 
+  variable: "--font-montserrat",
+  display: "swap",
+  preload: false,
+})
+const poppins = Poppins({ 
+  subsets: ["latin"], 
+  weight: ["400", "700"], 
+  variable: "--font-poppins",
+  display: "swap",
+  preload: false,
+})
+const lato = Lato({ 
+  subsets: ["latin"], 
+  weight: ["400", "700"], 
+  variable: "--font-lato",
+  display: "swap",
+  preload: false,
+})
 
 // Updated metadata for carousel generator app
 export const metadata: Metadata = {
@@ -49,7 +90,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${roboto.variable} ${openSans.variable} ${montserrat.variable} ${poppins.variable} ${lato.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${lora.variable} ${roboto.variable} ${openSans.variable} ${montserrat.variable} ${poppins.variable} ${lato.variable} font-sans antialiased`}>
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             {children}

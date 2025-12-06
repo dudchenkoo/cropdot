@@ -1,25 +1,13 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { getToken } from "next-auth/jwt"
 
+// Temporarily disabled auth check - will be enabled when Google OAuth is configured
 export async function middleware(req: NextRequest) {
-  // Skip middleware for NextAuth API routes
-  if (req.nextUrl.pathname.startsWith("/api/auth")) {
-    return NextResponse.next()
-  }
-
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
-
-  // Protect dashboard and create routes
-  if (req.nextUrl.pathname.startsWith("/dashboard") || req.nextUrl.pathname.startsWith("/create")) {
-    if (!token) {
-      return NextResponse.redirect(new URL("/", req.url))
-    }
-  }
-
+  // Allow all requests for now
   return NextResponse.next()
 }
 
 export const config = {
+  // Only run middleware on specific routes to improve performance
   matcher: ["/dashboard/:path*", "/create/:path*"],
 }

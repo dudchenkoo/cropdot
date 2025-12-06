@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
-import { Coins, User, Moon, Sun, CreditCard, MessageCircle, LogOut, Check, Menu } from "lucide-react"
+import { Coins, User, Moon, Sun, CreditCard, MessageCircle, LogOut } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useCoins } from "@/hooks/use-coins"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -15,51 +15,44 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getAvatarUrl, getUserEmail } from "@/lib/avatar"
-import { signIn, signOut, useSession } from "next-auth/react"
 
 interface HeaderProps {
   subtitle?: string
   topic?: string
   onBack?: () => void
   onLogoClick?: () => void
-  status?: string | null
+  saveStatus?: "saved" | "saving" | null
 }
 
-export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderProps) {
+const LINKEDIN_COLOR = "#0077B5"
+
+export function Header({ subtitle, topic, onBack, onLogoClick, saveStatus }: HeaderProps) {
   const pathname = usePathname()
-  const router = useRouter()
-  const displayTopic = topic || subtitle
   const { coins } = useCoins()
   const { theme, setTheme } = useTheme()
-  const { data: session } = useSession()
+  const [avatarUrl, setAvatarUrl] = useState<string>("")
   const [mounted, setMounted] = useState(false)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [userEmail, setUserEmail] = useState<string>("")
 
   useEffect(() => {
     setMounted(true)
+    setAvatarUrl(getAvatarUrl())
+    setUserEmail(getUserEmail())
   }, [])
 
-  const avatarUrl = getAvatarUrl(session)
-  const userEmail = getUserEmail(session)
-  const authed = !!session
+  // Only show topic after mount to avoid hydration mismatch
+  const displayTopic = mounted ? (topic || subtitle) : null
 
-  const handleLogout = async () => {
-    try {
-      window.localStorage.removeItem("cropdot-coins")
-      window.localStorage.removeItem("carousel-generator-saves")
-      await signOut({ callbackUrl: "/" })
-    } catch (error) {
-      console.error("Error during sign out", error)
-    }
+  const handleLogout = () => {
+    // TODO: Implement logout logic
+    console.log("Logout clicked")
   }
 
   return (
-    <header className="border-b border-border px-4 sm:px-6 py-4 bg-background">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
+    <header className="border-b border-border px-6 py-4 bg-background">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="flex items-center gap-3">
           {onLogoClick ? (
             <button
               onClick={onLogoClick}
@@ -85,30 +78,43 @@ export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderP
           {displayTopic && (
             <>
               <div className="h-4 w-px bg-border" />
-              <span className="text-sm text-muted-foreground">{displayTopic}</span>
-            </>
-          )}
-          {status && (
-            <>
-              {displayTopic && <div className="h-4 w-px bg-border" />}
-              <span className="flex items-center gap-1.5 text-xs text-green-400">
-                <Check className="w-3 h-3" />
-                {status}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{displayTopic}</span>
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-medium uppercase tracking-wide border border-border"
+                  style={{
+                    backgroundColor: `${LINKEDIN_COLOR}20`,
+                    color: LINKEDIN_COLOR,
+                    borderColor: `${LINKEDIN_COLOR}40`,
+                  }}
+                >
+                  LinkedIn
+                </span>
+                {saveStatus === "saving" && (
+                  <>
+                    <div className="h-4 w-px bg-border" />
+                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                      Saving...
+                    </span>
+                  </>
+                )}
+                {saveStatus === "saved" && (
+                  <>
+                    <div className="h-4 w-px bg-border" />
+                    <span className="flex items-center gap-1.5 text-sm text-green-500">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      Saved
+                    </span>
+                  </>
+                )}
+              </div>
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-4 min-w-0">
-          <button
-            onClick={() => setIsMenuOpen(true)}
-            className="md:hidden rounded-md border border-border px-2.5 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-            aria-label="Open navigation menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-
-          <nav className="hidden md:flex items-center gap-6">
+        <div className="flex items-center gap-4">
+          <nav className="flex items-center gap-6">
             <Link
               href="/templates"
               className={`text-sm transition-colors cursor-pointer ${
@@ -126,20 +132,11 @@ export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderP
               Pricing
             </Link>
           </nav>
-          <div className="h-6 w-px bg-border hidden md:block" />
-          <TooltipProvider delayDuration={200} skipDelayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border cursor-default">
-                  <Coins className="w-4 h-4 text-foreground" />
-                  <span className="text-sm font-medium text-foreground">{authed ? coins : 0}</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent align="end">
-                <p className="text-xs">You have {authed ? coins : 0} coins. Each generation costs 1 coin.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="h-6 w-px bg-border" />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border">
+            <Coins className="w-4 h-4 text-foreground" />
+            <span className="text-sm font-medium text-foreground">{coins}</span>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="rounded-full hover:ring-2 hover:ring-ring hover:ring-offset-2 transition-all cursor-pointer outline-none">
@@ -197,50 +194,6 @@ export function Header({ subtitle, topic, onBack, onLogoClick, status }: HeaderP
           </DropdownMenu>
         </div>
       </div>
-
-      <Dialog open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-base">Navigation</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Link
-              href="/templates"
-              onClick={() => setIsMenuOpen(false)}
-              className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors ${
-                pathname === "/templates" ? "border-primary text-primary" : "border-border hover:bg-muted"
-              }`}
-            >
-              <span>Templates</span>
-              {pathname === "/templates" && <Check className="h-4 w-4" />}
-            </Link>
-            <Link
-              href="/pricing"
-              onClick={() => setIsMenuOpen(false)}
-              className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors ${
-                pathname === "/pricing" ? "border-primary text-primary" : "border-border hover:bg-muted"
-              }`}
-            >
-              <span>Pricing</span>
-              {pathname === "/pricing" && <Check className="h-4 w-4" />}
-            </Link>
-            <Link
-              href="/billing"
-              onClick={() => setIsMenuOpen(false)}
-              className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
-            >
-              <span>Billing</span>
-            </Link>
-            <Link
-              href="/contact"
-              onClick={() => setIsMenuOpen(false)}
-              className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
-            >
-              <span>Contact</span>
-            </Link>
-          </div>
-        </DialogContent>
-      </Dialog>
     </header>
   )
 }

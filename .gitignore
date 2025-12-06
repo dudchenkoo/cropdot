@@ -52,7 +52,3 @@ Thumbs.db
 pnpm-lock.yaml
 yarn.lock
 
-# Credentials and sensitive data
-docs/github-token.md
-docs/linear-api-key.md
-

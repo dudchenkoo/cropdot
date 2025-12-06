@@ -1,11 +1,11 @@
 "use client"
 
 import type React from "react"
-import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTheme } from "next-themes"
+import { useRouter } from "next/navigation"
 import { Inter_Tight } from "next/font/google"
-import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, ChevronLeft, ChevronRight, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, Undo2, Redo2, X, Shuffle, Info, Bold, Italic, Underline, Strikethrough, ListOrdered, List, Highlighter } from "lucide-react"
+import { Eye, EyeOff, GripVertical, Trash2, Plus, Check, ChevronLeft, ChevronRight, Grid3x3, PaintBucket, Type, Layout, Maximize2, ArrowLeft, AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyStart, AlignVerticalJustifyEnd, AlignVerticalDistributeCenter, Undo2, Redo2, X, Shuffle, Info, Bold, Italic, Underline, Strikethrough, ListOrdered, List, FileText, Images } from "lucide-react"
 import type { CarouselData, Layer, Slide } from "@/lib/carousel-types"
 import { isCarouselData } from "@/lib/carousel-types"
 import { templates, type Template } from "@/lib/templates"
@@ -35,6 +35,8 @@ import {
 import { generateLayerId, slideToLayers, getPatternBackground } from "@/lib/helpers"
 import { loadCarousel, saveCarousel, deleteCarousel, type StoredCarousel } from "@/lib/storage"
 import { CarouselForm } from "./carousel-form"
+import { PostForm } from "./post-form"
+import type { PostGenerationResponse } from "@/lib/post-types"
 import { CarouselPreview } from "./carousel-preview"
 import { SlideCard } from "./slide-card"
 import { Header } from "./header"
@@ -51,12 +53,12 @@ import {
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { canRedo, canUndo, createHistory, pushState, redo as redoHistory, undo as undoHistory, type HistoryState } from "@/lib/history"
-import { useCoins } from "@/hooks/use-coins"
-import { useIsMobile } from "@/hooks/use-mobile"
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
   variable: "--font-inter-tight",
+  display: "swap",
+  preload: false, // Load only when needed
 })
 
 /**
@@ -75,14 +77,13 @@ const interTight = Inter_Tight({
  */
 export function CarouselGenerator(): JSX.Element {
   const { theme } = useTheme()
+  const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [history, setHistory] = useState<HistoryState<CarouselData | null>>(() => createHistory<CarouselData | null>(null, 50))
   const carouselData = history.present
   const [isLoading, setIsLoading] = useState(false)
   const [viewMode, setViewMode] = useState<"dashboard" | "creation">("dashboard")
   const [savedCarousels, setSavedCarousels] = useState<StoredCarousel[]>([])
-  const { coins } = useCoins()
-  const isMobile = useIsMobile()
   
   // Theme-aware dot pattern: light dots in dark mode, dark dots in light mode
   // Use default dark pattern until mounted to prevent hydration mismatch
@@ -102,8 +103,7 @@ export function CarouselGenerator(): JSX.Element {
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [carouselToDelete, setCarouselToDelete] = useState<StoredCarousel | null>(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const textareaRefs = useRef<Record<string, HTMLTextAreaElement>>({})
+  const [contentType, setContentType] = useState<"carousel" | "post">("carousel")
 
   const commitCarouselChange = useCallback(
     (updatedData: CarouselData, statusMessage?: string) => {
@@ -120,10 +120,6 @@ export function CarouselGenerator(): JSX.Element {
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  useEffect(() => {
-    setIsSidebarOpen(!isMobile)
-  }, [isMobile])
 
   useEffect(() => {
     setSavedCarousels(loadCarousel())
@@ -351,7 +347,7 @@ export function CarouselGenerator(): JSX.Element {
     const maxIndex = Math.max(0, carouselData.slides.length - 1)
     if (selectedSlideIndex > maxIndex) {
       setSelectedSlideIndex(maxIndex)
-  }
+    }
 
     const slide = carouselData.slides[Math.min(selectedSlideIndex, maxIndex)]
     if (selectedLayerId && !slide?.layers.some((layer) => layer.id === selectedLayerId)) {
@@ -408,30 +404,6 @@ export function CarouselGenerator(): JSX.Element {
             }
           }
           return layer
-        })
-        return {
-          ...slide,
-          layers: updatedLayers
-        }
-      }
-      return slide
-    })
-    const updatedData = { ...carouselData, slides: updatedSlides }
-    updateCarouselData(updatedData, "Changes saved")
-  }
-
-  const handleAllLayersHighlightColorUpdate = (slideIndex: number, highlightColor: string): void => {
-    if (!carouselData) return
-    const updatedSlides = carouselData.slides.map((slide, index) => {
-      if (index === slideIndex) {
-        const updatedLayers = slide.layers.map((layer) => {
-          return {
-            ...layer,
-            style: {
-              ...(layer.style || {}),
-              highlightColor,
-            },
-          }
         })
         return {
           ...slide,
@@ -570,8 +542,6 @@ export function CarouselGenerator(): JSX.Element {
 
   const handleAddLayer = (slideIndex: number, type: Layer["type"]): void => {
     if (!carouselData) return
-    // Get the current highlight color from existing layers on this slide, or use default
-    const currentHighlightColor = carouselData.slides[slideIndex]?.layers[0]?.style?.highlightColor || DEFAULT_HIGHLIGHT_COLOR
     const newLayer: Layer = {
       id: generateLayerId(),
       type,
@@ -584,10 +554,6 @@ export function CarouselGenerator(): JSX.Element {
               ? LAYER_CONTENT_DEFAULTS.bullet
               : LAYER_CONTENT_DEFAULTS.body,
       visible: true,
-      style: {
-        fontSize: type === "heading" ? "2xl" : type === "subheading" ? "base" : "sm",
-        highlightColor: currentHighlightColor,
-      },
     }
     const updatedSlides = carouselData.slides.map((slide, index) => {
       if (index === slideIndex) {
@@ -632,10 +598,7 @@ export function CarouselGenerator(): JSX.Element {
           id: generateLayerId(),
           type: "heading",
           content: LAYER_CONTENT_DEFAULTS.slideHeading,
-          visible: true,
-          style: {
-            fontSize: "2xl",
-          },
+          visible: true
         }
       ]
     }
@@ -759,13 +722,13 @@ export function CarouselGenerator(): JSX.Element {
 
     const updatedSlides = carouselData.slides.map((slide, index) => {
       if (index === selectedSlideIndex) {
-    const layers = [...slide.layers]
-    const draggedIndex = layers.findIndex((l) => l.id === draggedLayerId)
-    const targetIndex = layers.findIndex((l) => l.id === targetLayerId)
+        const layers = [...slide.layers]
+        const draggedIndex = layers.findIndex((l) => l.id === draggedLayerId)
+        const targetIndex = layers.findIndex((l) => l.id === targetLayerId)
 
-    if (draggedIndex !== -1 && targetIndex !== -1) {
-      const [draggedLayer] = layers.splice(draggedIndex, 1)
-      layers.splice(targetIndex, 0, draggedLayer)
+        if (draggedIndex !== -1 && targetIndex !== -1) {
+          const [draggedLayer] = layers.splice(draggedIndex, 1)
+          layers.splice(targetIndex, 0, draggedLayer)
           return {
             ...slide,
             layers: layers
@@ -793,38 +756,18 @@ export function CarouselGenerator(): JSX.Element {
 
   // Dashboard view - show when viewMode is dashboard
   if (viewMode === "dashboard") {
-  return (
+    return (
       <TooltipProvider delayDuration={300} skipDelayDuration={0}>
         <ErrorBoundary componentName="CarouselGenerator">
         <div className={`flex h-screen overflow-hidden ${interTight.variable}`}>
-      <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex flex-1 flex-col overflow-hidden">
             <Header subtitle={undefined} onBack={undefined} onLogoClick={() => setViewMode("dashboard")} />
-
-            {coins === 0 && (
-              <div className="border-b border-border bg-amber-50 px-6 py-3 text-amber-900">
-                <div className="max-w-7xl mx-auto flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    <div>
-                      <p className="text-sm font-semibold">You&apos;ve used your free generation!</p>
-                      <p className="text-xs text-amber-800">Upgrade to create more content.</p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/pricing"
-                    className="inline-flex h-9 items-center justify-center rounded-md border border-amber-200 bg-white px-4 text-xs font-semibold text-amber-900 shadow-sm transition-colors hover:bg-amber-100"
-                  >
-                    Go to pricing
-                  </Link>
-                </div>
-              </div>
-            )}
 
             <div className="flex flex-1 flex-col overflow-hidden">
             {/* Dashboard Title Section - only show if we have LinkedIn posts */}
             {savedCarousels.length > 0 && (
-              <div className="border-b border-border px-4 sm:px-6 py-4 bg-background">
-                <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="border-b border-border px-6 py-4 bg-background">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">{savedCarousels.length} LinkedIn posts</span>
                   </div>
@@ -842,7 +785,7 @@ export function CarouselGenerator(): JSX.Element {
                     <button
                       aria-label="Create new LinkedIn post"
                       onClick={handleStartNewGeneration}
-                      className="relative w-full sm:w-auto px-5 py-2 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
+                      className="relative px-5 py-2 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
                     >
                       New generation
                     </button>
@@ -852,79 +795,75 @@ export function CarouselGenerator(): JSX.Element {
             )}
 
             {/* Main Content Area */}
-          <section
+            <section
               className="flex-1 overflow-auto relative bg-background"
-            style={{
-                backgroundImage: `radial-gradient(${dotPatternColor} 1px, transparent 1px)`,
-              backgroundSize: "20px 20px",
-            }}
-          >
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
+            >
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.15]"
+                style={{
+                  backgroundImage: "url('/1_2.png')",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }}
+              />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
                   boxShadow: "inset 0 0 100px hsl(var(--background) / 0.5)",
-              }}
-            />
+                }}
+              />
 
               {savedCarousels.length === 0 ? (
-                <div className="relative z-10 flex flex-col items-center justify-center h-full pb-20">
-                <div
-                  className="absolute inset-0 pointer-events-none"
+                <div 
+                  className="relative z-10 flex flex-col items-center justify-center h-full pb-20"
                   style={{
-                    background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 50%)",
-                  }}
-                />
-
-                <div className="relative flex items-center justify-center mb-6">
-                  <div
-                    className="w-12 h-16 rounded-lg -rotate-12 absolute -left-6"
-                    style={{ backgroundColor: "#8b4a5e" }}
-                  >
-                    <div className="p-2 pt-3 space-y-1">
-                      <div className="h-0.5 bg-white/20 rounded w-full" />
-                      <div className="h-0.5 bg-white/20 rounded w-3/4" />
-                      <div className="h-0.5 bg-white/20 rounded w-1/2" />
-                    </div>
-                  </div>
-                  <div className="w-12 h-16 rounded-lg z-10 relative" style={{ backgroundColor: "#4a4a4a" }}>
-                    <div className="p-2 pt-3 space-y-1">
-                      <div className="h-0.5 bg-white/30 rounded w-full" />
-                      <div className="h-0.5 bg-white/30 rounded w-3/4" />
-                      <div className="h-0.5 bg-white/30 rounded w-1/2" />
-                    </div>
-                  </div>
-                  <div
-                    className="w-12 h-16 rounded-lg rotate-12 absolute -right-6"
-                    style={{ backgroundColor: "#6b4a3a" }}
-                  >
-                    <div className="p-2 pt-3 space-y-1">
-                      <div className="h-0.5 bg-white/20 rounded w-full" />
-                      <div className="h-0.5 bg-white/20 rounded w-3/4" />
-                      <div className="h-0.5 bg-white/20 rounded w-1/2" />
-                    </div>
-                  </div>
-                </div>
-
-                <h2
-                  className="text-xl md:text-2xl mb-3 bg-clip-text text-transparent font-semibold text-center"
-                  style={{
-                    backgroundImage: "linear-gradient(to bottom, #ffffff, #888888)",
-                    fontFamily: "var(--font-inter-tight)",
+                    backgroundColor: "#000000",
                   }}
                 >
-                  {coins === 0 ? "You've used your free generation. Get more coins to create content." : (
-                    <>
-                      High-performing LinkedIn content
-                      <br />
-                      in just a couple clicks
-                    </>
-                  )}
-                </h2>
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      backgroundImage: "url('/bg-texture.png')",
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      backgroundRepeat: "repeat",
+                      opacity: 0.1,
+                    }}
+                  />
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 50%)",
+                    }}
+                  />
+
+                  <div className="relative flex items-center justify-center mb-6 px-6">
+                    <img
+                      src="/ui-preview.png"
+                      alt="UI Elements Preview"
+                      className="max-w-full h-auto object-contain"
+                      style={{ maxHeight: "160px", width: "auto" }}
+                      onError={(e) => {
+                        console.error("Failed to load ui-preview.png:", e)
+                      }}
+                    />
+                  </div>
+
+                  <h2
+                    className="text-2xl md:text-3xl mb-3 bg-clip-text text-transparent font-semibold text-center"
+                    style={{
+                      backgroundImage: "linear-gradient(to bottom, #ffffff, #888888)",
+                      fontFamily: "var(--font-lora), serif",
+                    }}
+                  >
+                    High-performing LinkedIn content
+                    <br />
+                    in just a couple clicks
+                  </h2>
 
                   <p className="text-sm text-muted-foreground text-center max-w-md mb-8">
-                  {coins === 0
-                      ? "Buy a coin package to keep creating LinkedIn content without interruptions."
-                      : "Our LinkedIn specialization helps you create engaging posts that drive results. Optimized for maximum performance."}
+                    Our LinkedIn specialization helps you create engaging posts that drive results. Optimized for maximum performance.
                   </p>
 
                   <div className="relative">
@@ -938,22 +877,13 @@ export function CarouselGenerator(): JSX.Element {
                       }}
                     />
                     {/* Button */}
-                    {coins === 0 ? (
-                      <Link
-                        href="/pricing"
-                        className="relative inline-flex items-center justify-center px-6 py-2.5 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
-                      >
-                        Buy Coins
-                      </Link>
-                    ) : (
-                      <button
-                        aria-label="Start generating a carousel"
-                        onClick={handleStartNewGeneration}
-                        className="relative px-6 py-2.5 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
-                      >
-                        Start generating
-                      </button>
-                    )}
+                    <button
+                      aria-label="Start generating a carousel"
+                      onClick={handleStartNewGeneration}
+                      className="relative px-6 py-2.5 rounded-lg bg-background text-foreground text-sm font-medium cursor-pointer hover:bg-secondary transition-colors"
+                    >
+                      Start generating
+                    </button>
                   </div>
 
                   {/* Footer */}
@@ -1100,17 +1030,21 @@ export function CarouselGenerator(): JSX.Element {
             topic={carouselData?.topic}
             onBack={() => setViewMode("dashboard")}
             onLogoClick={() => setViewMode("dashboard")}
-            status={savedStatus}
           />
 
-          <div className="flex flex-1 overflow-hidden flex-col lg:flex-row">
+          <div className="flex flex-1 overflow-hidden">
             <section
               className="flex-1 overflow-auto relative bg-background"
-              style={{
-                backgroundImage: `radial-gradient(${dotPatternColor} 1px, transparent 1px)`,
-                backgroundSize: "20px 20px",
-              }}
             >
+              <div
+                className="absolute inset-0 pointer-events-none opacity-[0.15]"
+                style={{
+                  backgroundImage: "url('/1_2.png')",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }}
+              />
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
@@ -1120,17 +1054,7 @@ export function CarouselGenerator(): JSX.Element {
 
               {carouselData ? (
                 <>
-                  <div className="relative z-10 flex items-center justify-end w-full px-4 pt-4 lg:hidden">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="w-full sm:w-auto"
-                      onClick={() => setIsSidebarOpen(true)}
-                    >
-                      Edit controls
-                    </Button>
-                  </div>
-                  <div className="relative z-10 flex items-center justify-center min-h-full pb-24 px-4 sm:px-6">
+                  <div className="relative z-10 flex items-center justify-center min-h-full pb-24">
                     <ErrorBoundary componentName="CarouselPreview">
                       <CarouselPreview
                         data={carouselData}
@@ -1152,11 +1076,11 @@ export function CarouselGenerator(): JSX.Element {
                   </div>
                 
                 {/* Fixed Bottom Action Panel */}
-                <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-background/95 backdrop-blur-sm">
-                  <div className="w-full px-3 sm:px-4 py-2 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+                <div className="fixed bottom-0 left-0 right-[380px] z-20 border-t border-border bg-background/95 backdrop-blur-sm">
+                  <div className="px-4 py-2">
                     {/* Action buttons */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 max-w-full">
-                    <div className="flex items-center gap-2 flex-nowrap overflow-x-auto pb-1 sm:pb-0">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         aria-label="Open template settings"
                         onClick={() => setSelectedAction(selectedAction === "template" ? null : "template")}
@@ -1189,7 +1113,7 @@ export function CarouselGenerator(): JSX.Element {
                         aria-label="Open text styling"
                         onClick={() => {
                           if (selectedLayer) {
-                            setSelectedAction("text")
+                            setSelectedAction(selectedAction === "text" ? null : "text")
                           }
                         }}
                         className={cn(
@@ -1243,12 +1167,18 @@ export function CarouselGenerator(): JSX.Element {
                         <span className="text-[10px]">Info</span>
                       </button>
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <div className="flex items-center gap-2">
+                        {savedStatus && (
+                          <span className="flex items-center gap-1.5 text-xs text-green-400">
+                            <Check className="w-3 h-3" />
+                            {savedStatus}
+                          </span>
+                        )}
                         <button
                           aria-label="Toggle export options"
                           onClick={() => setSelectedAction(selectedAction === "export" ? null : "export")}
                           className={cn(
-                            "px-4 py-2 rounded-lg border border-border bg-background hover:bg-secondary text-foreground text-sm font-medium transition-colors w-full sm:w-auto",
+                            "px-4 py-2 rounded-lg border border-border bg-background hover:bg-secondary text-foreground text-sm font-medium transition-colors",
                             selectedAction === "export"
                               ? "bg-primary text-primary-foreground border-primary"
                               : ""
@@ -1259,7 +1189,7 @@ export function CarouselGenerator(): JSX.Element {
                         <button
                           aria-label="Save and exit to dashboard"
                           onClick={handleSaveAndExit}
-                          className="px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors cursor-pointer w-full sm:w-auto"
+                          className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
                         >
                           Save & Exit
                         </button>
@@ -1277,17 +1207,59 @@ export function CarouselGenerator(): JSX.Element {
                       className="text-2xl md:text-3xl mb-4 bg-clip-text text-transparent font-semibold"
                       style={{
                         backgroundImage: "linear-gradient(to bottom, #ffffff, #888888)",
-                        fontFamily: "var(--font-inter-tight)",
+                        fontFamily: "var(--font-lora), serif",
                       }}
                     >
                       Create High-Performing LinkedIn Content
                     </h1>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
                       Our LinkedIn specialization helps you create engaging posts that drive results. Optimized for maximum performance.
                     </p>
+                    
+                    {/* Content Type Selector */}
+                    <div className="flex items-center justify-center gap-2 mb-6">
+                      <button
+                        type="button"
+                        onClick={() => setContentType("carousel")}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                          contentType === "carousel"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+                        )}
+                      >
+                        Carousel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setContentType("post")}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                          contentType === "post"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+                        )}
+                      >
+                        Text Post
+                      </button>
+                    </div>
                   </div>
-                  <ErrorBoundary componentName="CarouselForm">
-                    <CarouselForm onGenerate={handleGenerate} isLoading={isLoading} setIsLoading={setIsLoading} />
+                  <ErrorBoundary componentName={contentType === "carousel" ? "CarouselForm" : "PostForm"}>
+                    {contentType === "carousel" ? (
+                      <CarouselForm onGenerate={handleGenerate} isLoading={isLoading} setIsLoading={setIsLoading} />
+                    ) : (
+                      <PostForm 
+                        onGenerate={(data: PostGenerationResponse) => {
+                          // Store post data and redirect to post view
+                          if (typeof window !== "undefined") {
+                            localStorage.setItem("generatedPostData", JSON.stringify(data))
+                            router.push("/dashboard/post")
+                          }
+                        }} 
+                        isLoading={isLoading} 
+                        setIsLoading={setIsLoading} 
+                      />
+                    )}
                   </ErrorBoundary>
                 </div>
               </div>
@@ -1301,33 +1273,11 @@ export function CarouselGenerator(): JSX.Element {
             )}
           </section>
 
-          {isMobile && isSidebarOpen && (
-            <div
-              className="fixed inset-0 z-20 bg-background/80 backdrop-blur-sm lg:hidden"
-              onClick={() => setIsSidebarOpen(false)}
-              aria-hidden
-            />
-          )}
-
           {carouselData && (
-          <aside
-              className={cn(
-                "w-full lg:w-[380px] border-l border-border flex flex-col bg-background transition-transform duration-300 fixed lg:static top-0 right-0 bottom-0 z-30 shadow-2xl lg:shadow-none",
-                isMobile ? (isSidebarOpen ? "translate-x-0" : "translate-x-full") : "translate-x-0",
-              )}
-            >
+            <aside className="w-[380px] border-l border-border flex flex-col bg-background">
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between border-b border-border px-4 py-3">
                   <div className="flex items-center gap-2">
-                    {isMobile && (
-                      <button
-                        aria-label="Close controls"
-                        onClick={() => setIsSidebarOpen(false)}
-                        className="p-1 rounded hover:bg-white/10 transition-colors lg:hidden"
-                      >
-                        <X className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                    )}
                     {selectedAction && (
                       <button
                         aria-label="Close settings"
@@ -1351,9 +1301,9 @@ export function CarouselGenerator(): JSX.Element {
                   </div>
                     <div className="flex items-center gap-2">
                       {!selectedAction && (
-                  <span className="text-xs text-muted-foreground">
-                    {selectedSlideIndex + 1} / {carouselData.slides.length}
-                  </span>
+                        <span className="text-xs text-muted-foreground">
+                          {selectedSlideIndex + 1} / {carouselData.slides.length}
+                        </span>
                       )}
                       <div className="flex items-center gap-1">
                         <Tooltip>
@@ -1390,170 +1340,288 @@ export function CarouselGenerator(): JSX.Element {
                         </Tooltip>
                       </div>
                     </div>
-                </div>
+                  </div>
 
                 <div className="flex-1 overflow-auto" ref={actionPanelRef}>
                   {/* Text Styling View */}
-                  {selectedAction === "text" && carouselData ? (
+                  {selectedAction === "text" && selectedLayer ? (
                     <div className="p-4 space-y-4">
-                      {/* Highlight Color - applies to all layers on the slide */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="text-xs text-muted-foreground">Highlight Color</label>
+                      {/* Text Formatting Toolbar */}
+                      <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                        <div className="flex items-center gap-1">
+                          {/* Bold */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                aria-label="Toggle bold"
+                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                  bold: !selectedLayer.style?.bold 
+                                })}
+                                className={cn(
+                                  "p-2 rounded transition-colors",
+                                  selectedLayer.style?.bold
+                                    ? "bg-accent/20 text-accent"
+                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                )}
+                              >
+                                <Bold className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Bold</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          {/* Italic */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                aria-label="Toggle italic"
+                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                  italic: !selectedLayer.style?.italic 
+                                })}
+                                className={cn(
+                                  "p-2 rounded transition-colors",
+                                  selectedLayer.style?.italic
+                                    ? "bg-accent/20 text-accent"
+                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                )}
+                              >
+                                <Italic className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Italic</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          {/* Underline */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                aria-label="Toggle underline"
+                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                  underline: !selectedLayer.style?.underline 
+                                })}
+                                className={cn(
+                                  "p-2 rounded transition-colors",
+                                  selectedLayer.style?.underline
+                                    ? "bg-accent/20 text-accent"
+                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                )}
+                              >
+                                <Underline className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Underline</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          {/* Strikethrough */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                aria-label="Toggle strikethrough"
+                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                  strikethrough: !selectedLayer.style?.strikethrough 
+                                })}
+                                className={cn(
+                                  "p-2 rounded transition-colors",
+                                  selectedLayer.style?.strikethrough
+                                    ? "bg-accent/20 text-accent"
+                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                )}
+                              >
+                                <Strikethrough className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Strikethrough</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          {/* Separator */}
+                          <div className="w-px h-6 bg-white/10 mx-1" />
+                          
+                          {/* Numbered List */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                aria-label="Toggle numbered list"
+                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                  listType: selectedLayer.style?.listType === "ordered" ? null : "ordered"
+                                })}
+                                className={cn(
+                                  "p-2 rounded transition-colors",
+                                  selectedLayer.style?.listType === "ordered"
+                                    ? "bg-accent/20 text-accent"
+                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                )}
+                              >
+                                <ListOrdered className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Numbered list</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          {/* Bulleted List */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                aria-label="Toggle bulleted list"
+                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
+                                  listType: selectedLayer.style?.listType === "unordered" ? null : "unordered"
+                                })}
+                                className={cn(
+                                  "p-2 rounded transition-colors",
+                                  selectedLayer.style?.listType === "unordered"
+                                    ? "bg-accent/20 text-accent"
+                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                )}
+                              >
+                                <List className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Bulleted list</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
-                        <p className="text-xs text-muted-foreground mb-2">Color for text highlighted with the marker icon in the edit layer</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">Highlight Color</label>
                         <div className="flex items-center gap-2">
                           <input
                             type="color"
-                            value={carouselData.slides[selectedSlideIndex]?.layers[0]?.style?.highlightColor || DEFAULT_HIGHLIGHT_COLOR}
-                            onChange={(e) => handleAllLayersHighlightColorUpdate(selectedSlideIndex, e.target.value)}
+                            value={selectedLayer.style?.highlightColor || DEFAULT_HIGHLIGHT_COLOR}
+                            onChange={(e) => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { highlightColor: e.target.value })}
                             className="w-12 h-10 rounded border border-white/10 bg-white/5 cursor-pointer"
-                            aria-label="Select highlight color for all layers"
+                            aria-label="Select highlight color"
                           />
                           <input
                             type="text"
-                            value={carouselData.slides[selectedSlideIndex]?.layers[0]?.style?.highlightColor || DEFAULT_HIGHLIGHT_COLOR}
-                            onChange={(e) => handleAllLayersHighlightColorUpdate(selectedSlideIndex, e.target.value)}
-                            className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-xs focus:outline-none focus:border-white/20"
+                            value={selectedLayer.style?.highlightColor || DEFAULT_HIGHLIGHT_COLOR}
+                            onChange={(e) => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { highlightColor: e.target.value })}
+                            className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
                             placeholder={DEFAULT_HIGHLIGHT_COLOR}
-                            aria-label="Highlight color value for all layers"
+                            aria-label="Highlight color value"
                           />
                         </div>
                       </div>
 
-                      {/* Layer Settings - one section for each layer on the slide */}
-                      {carouselData.slides[selectedSlideIndex]?.layers.map((layer, layerIndex) => (
-                        <div key={layer.id} className="border-t border-border pt-4 space-y-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-xs text-muted-foreground uppercase capitalize">
-                              {layer.type}
-                            </h3>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-xs text-muted-foreground">Font Family</label>
-                            <div className="grid grid-cols-2 gap-1.5">
-                              {FONT_FAMILY_OPTIONS.map((font) => {
-                                const isSelected = (layer.style?.fontFamily || DEFAULT_FONT_FAMILY) === font
-                                return (
-                  <button
-                                    aria-label={`Set font family ${font} for ${layer.type}`}
-                                    key={font}
-                                    onClick={() => handleLayerStyleUpdate(selectedSlideIndex, layer.id, { fontFamily: font })}
-                                    className={cn(
-                                      "px-2.5 py-1.5 rounded border transition-all text-center cursor-pointer",
-                                      isSelected
-                                        ? "bg-white/10 border-white/30 text-white"
-                                        : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10 hover:text-white"
-                                    )}
-                                  >
-                                    <div 
-                                      className="text-xs font-medium truncate"
-                                      style={{ fontFamily: font }}
-                                    >
-                                      {font}
-                                    </div>
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <label className="text-xs text-muted-foreground">Font Size</label>
-                              <span className="text-xs text-foreground font-medium">
-                                {(() => {
-                                  const currentSize = layer.style?.fontSize || DEFAULT_FONT_SIZE
-                                  return currentSize === "xs"
-                                    ? "Extra Small"
-                                    : currentSize === "sm"
-                                      ? "Small"
-                                      : currentSize === "base"
-                                        ? "Base"
-                                        : currentSize === "lg"
-                                          ? "Large"
-                                          : currentSize === "xl"
-                                            ? "Extra Large"
-                                            : currentSize === "2xl"
-                                              ? "2X Large"
-                                              : "3X Large"
-                                })()}
-                              </span>
-                            </div>
-                            <input
-                              type="range"
-                              min={0}
-                              max={FONT_SIZE_OPTIONS.length - 1}
-                              value={FONT_SIZE_OPTIONS.indexOf((layer.style?.fontSize || DEFAULT_FONT_SIZE) as typeof FONT_SIZE_OPTIONS[number])}
-                              onChange={(e) => {
-                                const index = parseInt(e.target.value)
-                                const selectedSize = FONT_SIZE_OPTIONS[index]
-                                handleLayerStyleUpdate(selectedSlideIndex, layer.id, { fontSize: selectedSize })
-                              }}
-                              className="w-full h-2 bg-white/5 rounded-lg appearance-none cursor-pointer accent-white/50"
-                              style={{
-                                background: `linear-gradient(to right, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) ${((FONT_SIZE_OPTIONS.indexOf((layer.style?.fontSize || DEFAULT_FONT_SIZE) as typeof FONT_SIZE_OPTIONS[number])) / (FONT_SIZE_OPTIONS.length - 1)) * 100}%, rgba(255, 255, 255, 0.05) ${((FONT_SIZE_OPTIONS.indexOf((layer.style?.fontSize || DEFAULT_FONT_SIZE) as typeof FONT_SIZE_OPTIONS[number])) / (FONT_SIZE_OPTIONS.length - 1)) * 100}%, rgba(255, 255, 255, 0.05) 100%)`
-                              }}
-                              aria-label={`Font size for ${layer.type}`}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-xs text-muted-foreground block">Text Transform</label>
-                            <div className="flex rounded-md border border-white/10 overflow-hidden w-full">
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">Font Family</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {FONT_FAMILY_OPTIONS.map((font) => {
+                            const isSelected = (selectedLayer.style?.fontFamily || DEFAULT_FONT_FAMILY) === font
+                            return (
                               <button
-                                aria-label={`Capitalize text for ${layer.type}`}
-                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, layer.id, { textTransform: "capitalize" })}
+                                aria-label={`Set font family ${font}`}
+                                key={font}
+                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { fontFamily: font })}
                                 className={cn(
-                                  "flex-1 px-4 py-2 text-xs border-r border-white/10 transition-colors cursor-pointer",
-                                  layer.style?.textTransform === "capitalize"
-                                    ? "bg-white/10 text-white"
-                                    : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                                  "px-3 py-3 rounded-lg border transition-all text-center flex items-center justify-center",
+                                  isSelected
+                                    ? "bg-accent/20 border-accent text-accent"
+                                    : "bg-white/5 border-white/10 hover:bg-white/10"
                                 )}
                               >
-                                Aa
+                                <div 
+                                  className="text-base font-medium"
+                                  style={{ fontFamily: font }}
+                                >
+                                  {font}
+                                </div>
                               </button>
-                              <button
-                                aria-label={`Uppercase text for ${layer.type}`}
-                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, layer.id, { textTransform: "uppercase" })}
-                                className={cn(
-                                  "flex-1 px-4 py-2 text-xs border-r border-white/10 transition-colors cursor-pointer",
-                                  layer.style?.textTransform === "uppercase"
-                                    ? "bg-white/10 text-white"
-                                    : "bg-white/5 text-muted-foreground hover:bg-white/10"
-                                )}
-                              >
-                                AA
-                              </button>
-                              <button
-                                aria-label={`Lowercase text for ${layer.type}`}
-                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, layer.id, { textTransform: "lowercase" })}
-                                className={cn(
-                                  "flex-1 px-4 py-2 text-xs border-r border-white/10 transition-colors cursor-pointer",
-                                  layer.style?.textTransform === "lowercase"
-                                    ? "bg-white/10 text-white"
-                                    : "bg-white/5 text-muted-foreground hover:bg-white/10"
-                                )}
-                              >
-                                aa
-                              </button>
-                              <button
-                                aria-label={`Remove text transformation for ${layer.type}`}
-                                onClick={() => handleLayerStyleUpdate(selectedSlideIndex, layer.id, { textTransform: "none" })}
-                                className={cn(
-                                  "flex-1 px-4 py-2 text-sm transition-colors cursor-pointer",
-                                  !layer.style?.textTransform || layer.style?.textTransform === "none"
-                                    ? "bg-white/10 text-white"
-                                    : "bg-white/5 text-muted-foreground hover:bg-white/10"
-                                )}
-                              >
-                                None
-                              </button>
-                            </div>
-                          </div>
+                            )
+                          })}
                         </div>
-                      ))}
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">Font Size</label>
+                          <select
+                            value={selectedLayer.style?.fontSize || DEFAULT_FONT_SIZE}
+                            onChange={(e) => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { fontSize: e.target.value })}
+                            className="w-full px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20 cursor-pointer"
+                          >
+                            {FONT_SIZE_OPTIONS.map((size) => (
+                              <option key={size} value={size}>
+                                {size === "xs"
+                                  ? "Extra Small"
+                                  : size === "sm"
+                                    ? "Small"
+                                    : size === "base"
+                                      ? "Base"
+                                      : size === "lg"
+                                        ? "Large"
+                                        : size === "xl"
+                                          ? "Extra Large"
+                                          : size === "2xl"
+                                            ? "2X Large"
+                                            : "3X Large"}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">Text Transform</label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            aria-label="Capitalize text"
+                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { textTransform: "capitalize" })}
+                            className={cn(
+                              "flex-1 px-4 py-2 rounded text-sm border transition-colors",
+                              selectedLayer.style?.textTransform === "capitalize"
+                                ? "bg-white/10 border-white/30 text-white"
+                                : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10"
+                            )}
+                          >
+                            Aa
+                          </button>
+                          <button
+                            aria-label="Uppercase text"
+                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { textTransform: "uppercase" })}
+                            className={cn(
+                              "flex-1 px-4 py-2 rounded text-sm border transition-colors",
+                              selectedLayer.style?.textTransform === "uppercase"
+                                ? "bg-white/10 border-white/30 text-white"
+                                : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10"
+                            )}
+                          >
+                            AA
+                          </button>
+                          <button
+                            aria-label="Lowercase text"
+                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { textTransform: "lowercase" })}
+                            className={cn(
+                              "flex-1 px-4 py-2 rounded text-sm border transition-colors",
+                              selectedLayer.style?.textTransform === "lowercase"
+                                ? "bg-white/10 border-white/30 text-white"
+                                : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10"
+                            )}
+                          >
+                            aa
+                          </button>
+                          <button
+                            aria-label="Remove text transformation"
+                            onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { textTransform: "none" })}
+                            className={cn(
+                              "flex-1 px-4 py-2 rounded text-sm border transition-colors",
+                              !selectedLayer.style?.textTransform || selectedLayer.style?.textTransform === "none"
+                                ? "bg-white/10 border-white/30 text-white"
+                                : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10"
+                            )}
+                          >
+                            None
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ) : selectedAction === "background" ? (
                     /* Background Settings View */
@@ -1631,59 +1699,42 @@ export function CarouselGenerator(): JSX.Element {
                         </div>
                       )}
 
-                      {/* Photo Upload */}
+                      {/* Photo URL */}
                       {carouselData.slides[selectedSlideIndex]?.background?.type === "photo" && (
-                        <>
-                          <div className="space-y-2">
-                            <label className="text-xs text-muted-foreground">Photo</label>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0]
-                                if (file) {
-                                  const reader = new FileReader()
-                                  reader.onloadend = () => {
-                                    const dataUrl = reader.result as string
-                                    handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { photoUrl: dataUrl })
-                                  }
-                                  reader.readAsDataURL(file)
-                                }
-                              }}
-                              className="w-full px-3 py-2 rounded bg-white/5 border border-white/10 text-xs focus:outline-none focus:border-white/20 cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-white/10 file:text-white hover:file:bg-white/20 file:cursor-pointer"
-                              aria-label="Upload background photo"
-                            />
-                            {carouselData.slides[selectedSlideIndex]?.background?.photoUrl && (
-                              <p className="text-xs text-muted-foreground">Photo uploaded</p>
-                            )}
-                          </div>
-
-                          {/* Overlay Options - only show when photo is uploaded */}
-                          {carouselData.slides[selectedSlideIndex]?.background?.photoUrl && (
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between mb-2">
-                                <label className="text-xs text-muted-foreground">Overlay</label>
-                                <span className="text-xs text-foreground font-medium">
-                                  {Math.round((carouselData.slides[selectedSlideIndex]?.background?.overlayOpacity || 0) * 100)}%
-                                </span>
-                              </div>
-                              <input
-                                type="range"
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                value={carouselData.slides[selectedSlideIndex]?.background?.overlayOpacity || 0}
-                                onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { 
-                                  overlayOpacity: parseFloat(e.target.value),
-                                  overlayColor: "#000000"
-                                })}
-                                className="w-full h-2 bg-white/5 rounded-lg appearance-none cursor-pointer accent-white/50"
-                                aria-label="Overlay opacity"
-                              />
-                            </div>
-                          )}
-                        </>
+                        <div className="space-y-2">
+                          <label className="text-sm text-muted-foreground">Photo URL</label>
+                          <input
+                            type="text"
+                            value={carouselData.slides[selectedSlideIndex]?.background?.photoUrl || ""}
+                            onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { photoUrl: e.target.value })}
+                            className="w-full px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
+                            placeholder="https://example.com/image.jpg"
+                            aria-label="Background photo URL"
+                          />
+                        </div>
                       )}
+
+                      {/* Accent Color */}
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">Accent Color</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={carouselData.slides[selectedSlideIndex]?.background?.accentColor || DEFAULT_ACCENT_COLOR}
+                            onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { accentColor: e.target.value })}
+                            className="w-12 h-10 rounded border border-white/10 bg-white/5 cursor-pointer"
+                            aria-label="Select accent color"
+                          />
+                          <input
+                            type="text"
+                            value={carouselData.slides[selectedSlideIndex]?.background?.accentColor || DEFAULT_ACCENT_COLOR}
+                            onChange={(e) => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, { accentColor: e.target.value })}
+                            className="flex-1 px-3 py-2 rounded bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20"
+                            placeholder={DEFAULT_ACCENT_COLOR}
+                            aria-label="Accent color value"
+                          />
+                        </div>
+                      </div>
 
                       {/* Pattern Settings */}
                       <div className="space-y-3 p-3 rounded-lg bg-white/5 border border-white/10">
@@ -1691,7 +1742,7 @@ export function CarouselGenerator(): JSX.Element {
                           <label className="text-sm font-medium">Pattern</label>
                           <button
                             aria-label="Toggle background pattern"
-                    onClick={() => {
+                            onClick={() => {
                               const currentEnabled = carouselData.slides[selectedSlideIndex]?.background?.pattern?.enabled || false
                               handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
                                 pattern: { enabled: !currentEnabled }
@@ -1709,7 +1760,7 @@ export function CarouselGenerator(): JSX.Element {
                                 carouselData.slides[selectedSlideIndex]?.background?.pattern?.enabled ? "translate-x-5" : "translate-x-0"
                               )}
                             />
-                  </button>
+                          </button>
                         </div>
 
                         {carouselData.slides[selectedSlideIndex]?.background?.pattern?.enabled && (
@@ -1722,7 +1773,7 @@ export function CarouselGenerator(): JSX.Element {
                                   const currentPattern = carouselData.slides[selectedSlideIndex]?.background?.pattern?.type
                                   const isSelected = currentPattern === patternType
                                   return (
-                      <button
+                                    <button
                                       aria-label={`Select ${patternType} pattern`}
                                       key={patternType}
                                       onClick={() => handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
@@ -1748,12 +1799,12 @@ export function CarouselGenerator(): JSX.Element {
                                 <label className="text-xs text-muted-foreground">Opacity</label>
                                 <button
                                   aria-label="Toggle pattern opacity adjustment"
-                        onClick={() => {
+                                  onClick={() => {
                                     const currentEnabled = carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacityEnabled || false
                                     handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
                                       pattern: { opacityEnabled: !currentEnabled }
                                     })
-                        }}
+                                  }}
                                   className={cn(
                                     "relative w-9 h-5 rounded-full transition-colors",
                                     carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacityEnabled ? "bg-accent" : "bg-white/10"
@@ -1766,8 +1817,8 @@ export function CarouselGenerator(): JSX.Element {
                                       carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacityEnabled ? "translate-x-4" : "translate-x-0"
                                     )}
                                   />
-                      </button>
-                  </div>
+                                </button>
+                              </div>
                               {carouselData.slides[selectedSlideIndex]?.background?.pattern?.opacityEnabled && (
                                   <input
                                     type="range"
@@ -1788,9 +1839,9 @@ export function CarouselGenerator(): JSX.Element {
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <label className="text-xs text-muted-foreground">Scale</label>
-                  <button
+                                <button
                                   aria-label="Toggle pattern scale adjustment"
-                    onClick={() => {
+                                  onClick={() => {
                                     const currentEnabled = carouselData.slides[selectedSlideIndex]?.background?.pattern?.scaleEnabled || false
                                     handleBackgroundUpdate(applyToAllSlides ? "all" : selectedSlideIndex, {
                                       pattern: { scaleEnabled: !currentEnabled }
@@ -1846,41 +1897,47 @@ export function CarouselGenerator(): JSX.Element {
                             applyToAllSlides ? "bg-accent" : "bg-white/10"
                           )}
                           aria-pressed={applyToAllSlides}
-                  >
+                        >
                           <span
                             className={cn(
                               "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
                               applyToAllSlides ? "translate-x-5" : "translate-x-0"
                             )}
                           />
-                  </button>
-                </div>
+                        </button>
+                      </div>
 
                       {/* Size Options */}
                       <div className="space-y-2">
-                        <label className="text-xs text-muted-foreground block">Aspect Ratio</label>
-                        <div className="flex rounded-md border border-white/10 overflow-hidden w-full">
-                          {SIZE_OPTIONS.map((option, index) => {
-                            const currentSize = carouselData.slides[selectedSlideIndex]?.size || DEFAULT_SIZE
-                            const isSelected = currentSize === option.value
-                            const isLast = index === SIZE_OPTIONS.length - 1
+                        <label className="text-sm text-muted-foreground">Aspect Ratio</label>
+                          <div className="flex gap-3">
+                            {SIZE_OPTIONS.map((option) => {
+                              const currentSize = carouselData.slides[selectedSlideIndex]?.size || DEFAULT_SIZE
+                              const isSelected = currentSize === option.value
                             return (
                               <button
                                 aria-label={`Select ${option.label} aspect ratio`}
                                 key={option.value}
                                 onClick={() => handleSizeUpdate(applyToAllSlides ? "all" : selectedSlideIndex, option.value)}
                                 className={cn(
-                                  "flex-1 px-4 py-2 text-xs border-r border-white/10 transition-colors cursor-pointer",
-                                  isLast && "border-r-0",
+                                  "flex-1 flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
                                   isSelected
-                                    ? "bg-white/10 text-white"
-                                    : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white"
+                                    ? "bg-white/5 border-accent"
+                                    : "bg-white/5 border-white/10 hover:border-white/20"
                                 )}
                               >
-                                <div className="flex flex-col items-center gap-0.5">
-                                  <span className="text-base font-bold">{option.value}</span>
-                                  <span>{option.label}</span>
-                                </div>
+                                <span className={cn(
+                                  "text-2xl font-bold mb-1.5",
+                                  isSelected ? "text-accent" : "text-muted-foreground"
+                                )}>
+                                  {option.value}
+                                </span>
+                                <span className={cn(
+                                  "text-xs",
+                                  isSelected ? "text-foreground" : "text-muted-foreground"
+                                )}>
+                                  {option.label}
+                                </span>
                               </button>
                             )
                           })}
@@ -2027,10 +2084,13 @@ export function CarouselGenerator(): JSX.Element {
                       </div>
 
                       {/* Padding Section */}
-                      <div className="space-y-3">
+                      <div className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
                         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PADDING</label>
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
+                            <div className="p-2 rounded bg-white/5 border border-white/10">
+                              <Layout className="w-4 h-4 text-muted-foreground" />
+                            </div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-sm">Content Padding</span>
@@ -2055,21 +2115,20 @@ export function CarouselGenerator(): JSX.Element {
                       </div>
 
                       {/* Alignment Section */}
-                      <div className="space-y-4">
+                      <div className="space-y-4 p-4 rounded-lg bg-white/5 border border-white/10">
                         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">ALIGNMENT</label>
                         
                         {/* Horizontal Alignment */}
                         <div className="space-y-2">
-                          <label className="text-xs text-muted-foreground block">Horizontal</label>
-                          <div className="inline-flex rounded-md border border-white/10 overflow-hidden w-full">
+                          <label className="text-xs text-muted-foreground">Horizontal</label>
+                          <div className="flex gap-2">
                               {([
                                 { value: "left" as const, icon: AlignLeft },
                                 { value: "center" as const, icon: AlignCenter },
                                 { value: "right" as const, icon: AlignRight },
-                              ]).map(({ value, icon: Icon }, index, array) => {
+                              ]).map(({ value, icon: Icon }) => {
                                 const currentAlign = carouselData.slides[selectedSlideIndex]?.layout?.horizontalAlign || DEFAULT_HORIZONTAL_ALIGN
                               const isSelected = currentAlign === value
-                              const isLast = index === array.length - 1
                               return (
                                 <button
                                   key={value}
@@ -2077,15 +2136,17 @@ export function CarouselGenerator(): JSX.Element {
                                     horizontalAlign: value
                                   })}
                                   className={cn(
-                                    "flex-1 flex items-center justify-center p-2 transition-colors cursor-pointer",
-                                    !isLast && "border-r border-white/10",
+                                    "flex-1 flex items-center justify-center p-3 rounded-lg border-2 transition-all",
                                     isSelected
-                                      ? "bg-white/10 text-white"
-                                      : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white"
+                                      ? "bg-accent border-accent"
+                                      : "bg-white/5 border-white/10 hover:border-white/20"
                                   )}
                                   aria-label={`Align text ${value}`}
                                 >
-                                  <Icon className="w-4 h-4" />
+                                  <Icon className={cn(
+                                    "w-5 h-5",
+                                    isSelected ? "text-white" : "text-muted-foreground"
+                                  )} />
                                 </button>
                               )
                             })}
@@ -2094,17 +2155,16 @@ export function CarouselGenerator(): JSX.Element {
 
                         {/* Vertical Alignment */}
                         <div className="space-y-2">
-                          <label className="text-xs text-muted-foreground block">Vertical</label>
-                          <div className="inline-flex rounded-md border border-white/10 overflow-hidden w-full">
+                          <label className="text-xs text-muted-foreground">Vertical</label>
+                          <div className="flex gap-2">
                               {([
                                 { value: "top" as const, icon: AlignVerticalJustifyStart },
                                 { value: "center" as const, icon: AlignVerticalJustifyCenter },
                                 { value: "bottom" as const, icon: AlignVerticalJustifyEnd },
                                 { value: "stretch" as const, icon: AlignVerticalDistributeCenter },
-                              ]).map(({ value, icon: Icon }, index, array) => {
+                              ]).map(({ value, icon: Icon }) => {
                                 const currentAlign = carouselData.slides[selectedSlideIndex]?.layout?.verticalAlign || DEFAULT_VERTICAL_ALIGN
                               const isSelected = currentAlign === value
-                              const isLast = index === array.length - 1
                               return (
                                 <button
                                   key={value}
@@ -2112,15 +2172,17 @@ export function CarouselGenerator(): JSX.Element {
                                     verticalAlign: value
                                   })}
                                   className={cn(
-                                    "flex-1 flex items-center justify-center p-2 transition-colors cursor-pointer",
-                                    !isLast && "border-r border-white/10",
+                                    "flex-1 flex items-center justify-center p-3 rounded-lg border-2 transition-all",
                                     isSelected
-                                      ? "bg-white/10 text-white"
-                                      : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white"
+                                      ? "bg-accent border-accent"
+                                      : "bg-white/5 border-white/10 hover:border-white/20"
                                   )}
                                   aria-label={`Align content ${value}`}
                                 >
-                                  <Icon className="w-4 h-4" />
+                                  <Icon className={cn(
+                                    "w-5 h-5",
+                                    isSelected ? "text-white" : "text-muted-foreground"
+                                  )} />
                                 </button>
                               )
                             })}
@@ -2178,36 +2240,16 @@ export function CarouselGenerator(): JSX.Element {
                   ) : (
                     /* Default Edit Panel View */
                     <>
-                  {/* Add layer section - appears first */}
-                  <div className="p-4 border-b border-border">
-                    <p className="text-xs text-muted-foreground mb-2">Add layer</p>
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => handleAddLayer(selectedSlideIndex, "heading")}
-                        className="px-3 py-1.5 text-xs rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
-                      >
-                        Heading
-                      </button>
-                      <button
-                        onClick={() => handleAddLayer(selectedSlideIndex, "subheading")}
-                        className="px-3 py-1.5 text-xs rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
-                      >
-                        Subheading
-                        </button>
-                        <button
-                          onClick={() => handleAddLayer(selectedSlideIndex, "body")}
-                        className="px-3 py-1.5 text-xs rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
-                        >
-                        Body
-                        </button>
+                  <div className="px-4 py-3 border-b border-border">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">Layers</span>
                     </div>
                   </div>
 
-                  {/* Layers list - appears after Add layer */}
                   <div className="divide-y divide-border">
                     {currentSlide?.layers.map((layer) => (
-                      <div key={layer.id}>
                       <div
+                        key={layer.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, layer.id)}
                         onDragOver={handleDragOver}
@@ -2217,16 +2259,16 @@ export function CarouselGenerator(): JSX.Element {
                         className={`px-4 py-3 cursor-pointer transition-colors ${
                           selectedLayerId === layer.id ? "bg-white/10" : "hover:bg-white/5"
                         } ${draggedLayerId === layer.id ? "opacity-50" : ""}`}
-                          tabIndex={0}
-                          role="button"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault()
-                              handleSelectLayer(layer.id)
-                            }
-                          }}
-                          aria-pressed={selectedLayerId === layer.id}
-                          aria-label={`Select ${layer.type} layer`}
+                        tabIndex={0}
+                        role="button"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            handleSelectLayer(layer.id)
+                          }
+                        }}
+                        aria-pressed={selectedLayerId === layer.id}
+                        aria-label={`Select ${layer.type} layer`}
                       >
                         <div className="flex items-center gap-2">
                           <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 cursor-grab active:cursor-grabbing" />
@@ -2242,50 +2284,51 @@ export function CarouselGenerator(): JSX.Element {
                             </p>
                           </div>
                           <div className="flex items-center gap-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                            <button
-                                    aria-label={layer.visible ? "Hide layer" : "Show layer"}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleLayerVisibility(selectedSlideIndex, layer.id)
-                              }}
-                              className="p-1 rounded hover:bg-white/10 transition-colors"
-                            >
-                              {layer.visible ? (
-                                <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-                              ) : (
-                                <EyeOff className="w-3.5 h-3.5 text-muted-foreground hover:text-red-400" />
-                              )}
-                            </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{layer.visible ? "Hide layer" : "Show layer"}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                            <button
-                                    aria-label="Delete layer"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleDeleteLayer(selectedSlideIndex, layer.id)
-                              }}
-                              className="p-1 rounded hover:bg-red-500/20 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-red-400" />
-                            </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Delete layer</p>
-                                </TooltipContent>
-                              </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  aria-label={layer.visible ? "Hide layer" : "Show layer"}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleLayerVisibility(selectedSlideIndex, layer.id)
+                                  }}
+                                  className="p-1 rounded hover:bg-white/10 transition-colors"
+                                >
+                                  {layer.visible ? (
+                                    <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                                  ) : (
+                                    <EyeOff className="w-3.5 h-3.5 text-muted-foreground hover:text-red-400" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{layer.visible ? "Hide layer" : "Show layer"}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  aria-label="Delete layer"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteLayer(selectedSlideIndex, layer.id)
+                                  }}
+                                  className="p-1 rounded hover:bg-red-500/20 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-red-400" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Delete layer</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                         </div>
+                      </div>
+                    ))}
                   </div>
 
-                        {/* Edit layer block - shows right after the selected layer */}
-                        {selectedLayerId === layer.id && selectedLayer && (
+                  {selectedLayer && (
                     <div className="p-4 border-t border-border bg-white/5">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs text-muted-foreground">Edit layer</span>
@@ -2293,20 +2336,20 @@ export function CarouselGenerator(): JSX.Element {
                           value={selectedLayer.type}
                           onChange={(e) => {
                             if (!carouselData) return
-                                  const updatedSlides = carouselData.slides.map((slide, index) => {
-                                    if (index === selectedSlideIndex) {
-                                      return {
-                                        ...slide,
-                                        layers: slide.layers.map((l) =>
-                              l.id === selectedLayerId ? { ...l, type: e.target.value as Layer["type"] } : l,
-                            )
-                                      }
-                                    }
-                                    return slide
-                                  })
-                                  const updatedData = { ...carouselData, slides: updatedSlides }
-                                  updateCarouselData(updatedData, "Changes saved")
-                          }}
+                            const updatedSlides = carouselData.slides.map((slide, index) => {
+                              if (index === selectedSlideIndex) {
+                                return {
+                                  ...slide,
+                                  layers: slide.layers.map((l) =>
+                                    l.id === selectedLayerId ? { ...l, type: e.target.value as Layer["type"] } : l,
+                                  )
+                                }
+                              }
+                              return slide
+                            })
+                              const updatedData = { ...carouselData, slides: updatedSlides }
+                              updateCarouselData(updatedData, "Changes saved")
+                            }}
                           className="text-xs bg-white/5 border border-white/10 rounded px-2 py-1 cursor-pointer"
                         >
                           <option value="heading">Heading</option>
@@ -2314,221 +2357,58 @@ export function CarouselGenerator(): JSX.Element {
                           <option value="body">Body</option>
                         </select>
                       </div>
-                            
-                            {/* Text Formatting Toolbar - minimal style */}
-                            <div className="flex items-center gap-1 mb-2">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    aria-label="Toggle bold"
-                                    onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
-                                      bold: !selectedLayer.style?.bold 
-                                    })}
-                                    className={cn(
-                                      "p-1.5 rounded transition-colors",
-                                      selectedLayer.style?.bold
-                                        ? "bg-white/10 text-white"
-                                        : "text-muted-foreground hover:text-white hover:bg-white/5"
-                                    )}
-                                  >
-                                    <Bold className="w-3.5 h-3.5" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Bold</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    aria-label="Toggle italic"
-                                    onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
-                                      italic: !selectedLayer.style?.italic 
-                                    })}
-                                    className={cn(
-                                      "p-1.5 rounded transition-colors",
-                                      selectedLayer.style?.italic
-                                        ? "bg-white/10 text-white"
-                                        : "text-muted-foreground hover:text-white hover:bg-white/5"
-                                    )}
-                                  >
-                                    <Italic className="w-3.5 h-3.5" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Italic</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                      <button
-                                    aria-label="Toggle underline"
-                                    onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
-                                      underline: !selectedLayer.style?.underline 
-                                    })}
-                                    className={cn(
-                                      "p-1.5 rounded transition-colors",
-                                      selectedLayer.style?.underline
-                                        ? "bg-white/10 text-white"
-                                        : "text-muted-foreground hover:text-white hover:bg-white/5"
-                                    )}
-                      >
-                                    <Underline className="w-3.5 h-3.5" />
-                      </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Underline</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                      <button
-                                    aria-label="Toggle strikethrough"
-                                    onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
-                                      strikethrough: !selectedLayer.style?.strikethrough 
-                                    })}
-                                    className={cn(
-                                      "p-1.5 rounded transition-colors",
-                                      selectedLayer.style?.strikethrough
-                                        ? "bg-white/10 text-white"
-                                        : "text-muted-foreground hover:text-white hover:bg-white/5"
-                                    )}
-                      >
-                                    <Strikethrough className="w-3.5 h-3.5" />
-                      </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Strikethrough</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                      <button
-                                    aria-label="Highlight selected text"
-                                    onClick={(e) => {
-                                      e.preventDefault()
-                                      // Get the textarea ref for this layer
-                                      const textarea = textareaRefs.current[selectedLayerId!]
-                                      if (textarea) {
-                                        const start = textarea.selectionStart
-                                        const end = textarea.selectionEnd
-                                        if (start !== end) {
-                                          const selectedText = textarea.value.substring(start, end)
-                                          if (selectedText) {
-                                            const before = textarea.value.substring(0, start)
-                                            const after = textarea.value.substring(end)
-                                            // Wrap selected text with == markers for highlighting
-                                            const highlightedText = `${before}==${selectedText}==${after}`
-                                            
-                                            // Ensure the layer has the current highlight color set
-                                            const currentHighlightColor = carouselData?.slides[selectedSlideIndex]?.layers[0]?.style?.highlightColor || DEFAULT_HIGHLIGHT_COLOR
-                                            handleLayerUpdate(selectedSlideIndex, selectedLayerId!, highlightedText)
-                                            
-                                            // Update the layer style to include highlight color if not already set
-                                            if (selectedLayer && !selectedLayer.style?.highlightColor) {
-                                              handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { highlightColor: currentHighlightColor })
-                                            }
-                                            
-                                            // Restore cursor position after update
-                                            setTimeout(() => {
-                                              textarea.focus()
-                                              textarea.setSelectionRange(start + 2, end + 2)
-                                            }, 0)
-                                          }
-                                        }
-                                      }
-                                    }}
-                                    className={cn(
-                                      "p-1.5 rounded transition-colors",
-                                      "text-muted-foreground hover:text-white hover:bg-white/5"
-                                    )}
-                      >
-                                    <Highlighter className="w-3.5 h-3.5" />
-                      </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Highlight selected text</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <div className="w-px h-4 bg-white/10 mx-0.5" />
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                      <button
-                                    aria-label="Toggle numbered list"
-                                    onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
-                                      listType: selectedLayer.style?.listType === "ordered" ? null : "ordered"
-                                    })}
-                                    className={cn(
-                                      "p-1.5 rounded transition-colors",
-                                      selectedLayer.style?.listType === "ordered"
-                                        ? "bg-white/10 text-white"
-                                        : "text-muted-foreground hover:text-white hover:bg-white/5"
-                                    )}
-                      >
-                                    <ListOrdered className="w-3.5 h-3.5" />
-                      </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Numbered list</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    aria-label="Toggle bulleted list"
-                                    onClick={() => handleLayerStyleUpdate(selectedSlideIndex, selectedLayerId!, { 
-                                      listType: selectedLayer.style?.listType === "unordered" ? null : "unordered"
-                                    })}
-                                    className={cn(
-                                      "p-1.5 rounded transition-colors",
-                                      selectedLayer.style?.listType === "unordered"
-                                        ? "bg-white/10 text-white"
-                                        : "text-muted-foreground hover:text-white hover:bg-white/5"
-                                    )}
-                                  >
-                                    <List className="w-3.5 h-3.5" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Bulleted list</p>
-                                </TooltipContent>
-                              </Tooltip>
-                    </div>
-                            
-                            <textarea
-                              ref={(el) => {
-                                if (el) {
-                                  textareaRefs.current[layer.id] = el
-                                } else {
-                                  delete textareaRefs.current[layer.id]
-                                }
-                              }}
-                              value={selectedLayer.content}
-                              onChange={(e) => handleLayerUpdate(selectedSlideIndex, selectedLayerId!, e.target.value)}
-                              rows={4}
-                              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20 transition-colors resize-none"
-                              placeholder="Enter text..."
-                              aria-label="Layer content"
-                            />
-                  </div>
+                      <textarea
+                        value={selectedLayer.content}
+                        onChange={(e) => handleLayerUpdate(selectedSlideIndex, selectedLayerId!, e.target.value)}
+                        rows={4}
+                        className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-white/20 transition-colors resize-none"
+                        placeholder="Enter text..."
+                        aria-label="Layer content"
+                      />
+                      <div className="flex items-center justify-end mt-3">
+                        <div aria-live="polite" className="sr-only">
+                          {savedStatus || ""}
+                        </div>
+                        {savedStatus && (
+                          <span className="flex items-center gap-1.5 text-xs text-green-400">
+                            <Check className="w-3 h-3" />
+                            {savedStatus}
+                          </span>
                         )}
-                </div>
-                    ))}
-              </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="p-4 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-2">Add layer</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleAddLayer(selectedSlideIndex, "heading")}
+                        className="px-3 py-1.5 text-xs rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                      >
+                        Heading
+                      </button>
+                      <button
+                        onClick={() => handleAddLayer(selectedSlideIndex, "subheading")}
+                        className="px-3 py-1.5 text-xs rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                      >
+                        Subheading
+                      </button>
+                      <button
+                        onClick={() => handleAddLayer(selectedSlideIndex, "body")}
+                        className="px-3 py-1.5 text-xs rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                      >
+                        Body
+                      </button>
+                    </div>
+                  </div>
                     </>
                   )}
                 </div>
-                </div>
+              </div>
             </aside>
           )}
-              </div>
+        </div>
         
       </div>
     </div>
@@ -2571,9 +2451,9 @@ export function CarouselGenerator(): JSX.Element {
                 </button>
               ))
             )}
+          </div>
         </div>
       </div>
-    </div>
     )}
       </ErrorBoundary>
     </TooltipProvider>
